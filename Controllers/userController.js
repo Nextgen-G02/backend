@@ -1,4 +1,4 @@
-import User from "../Models/User.js";
+import User from "../models/user.js";
 import bcrypt from "bcrypt";
 import generateToken from "../utils/generateToken.js";
 
@@ -97,3 +97,50 @@ export const loginUser = async (req, res) => {
             });
         }
 }
+
+export const createStaff = async (req, res) => {
+  try {
+    const { firstName, lastName, email, password } = req.body;
+
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({
+        message: "All fields are required"
+      });
+    }
+
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res.status(400).json({
+        message: "User already exists"
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const staff = await User.create({
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      role: "staff"
+    });
+
+    res.status(201).json({
+      message: "Staff account created successfully",
+      user: {
+        id: staff._id,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        email: staff.email,
+        role: staff.role
+      }
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Server error"
+    });
+  }
+};
