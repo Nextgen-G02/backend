@@ -11,3 +11,4 @@ const cakeSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = mongoose.model('Cake', cakeSchema);
+//create a model for cake with name, description, price, category, image, weight and stock. The category should be a reference to the category model.
