@@ -48,9 +48,7 @@ const productSchema = new mongoose.Schema({
       default: "In Stock"
     }
 },
-     {
-    timestamps: true   
-  }
+
 );
 
 const Product = mongoose.model("Product", productSchema);
