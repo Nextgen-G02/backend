@@ -48,9 +48,8 @@ export const addProduct = async (req, res) => {
             message: 'Product added successfully',
             data: newProduct
         });
-
-
-    }catch (error) {
+    }
+    catch (error) {
         res.status(500).json({
             success:false,
             message: 'Failed to add product',
