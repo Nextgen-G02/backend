@@ -1,6 +1,5 @@
-import product from '../models/product.model.js';
+import Product from '../models/product.model.js';
 
-import React from 'react'
 export const addProduct = async (req, res) => {
     try {
         const { 
