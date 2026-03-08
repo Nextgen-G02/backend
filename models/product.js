@@ -21,7 +21,7 @@ const productSchema = new mongoose.Schema({
       required: true
     },
 
-    images: [
+    pImg: [
       {
         type: String
       }
@@ -32,7 +32,7 @@ const productSchema = new mongoose.Schema({
       required: true
     },
 
-     price: {
+    price: {
       type: Number,
       required: true
     },
