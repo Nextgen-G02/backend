@@ -1,78 +1,51 @@
+const mongoose = require('mongoose');
+
 const orderSchema = new mongoose.Schema({
-  
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true
-  },
-
-  orderItems: [
-    {
-      product: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
-        required: true
-      },
-      name: String,
-      quantity: {
-        type: Number,
-        required: true
-      },
-      price: {
-        type: Number,
-        required: true
-      },
-      total: Number
-    }
-  ],
-
-  shippingAddress: {
-    street: String,
-    city: String,
-    district: String,
-    postalCode: String,
-    country: String
-  },
-
-  paymentMethod: {
-    type: String,
-    enum: ["COD", "Card", "PayPal"],
-    required: true
-  },
-
-  paymentStatus: {
-    type: String,
-    enum: ["Pending", "Paid", "Failed"],
-    default: "Pending"
-  },
-
-  orderStatus: {
-    type: String,
-    enum: [
-      "Pending",
-      "Confirmed",
-      "Processing",
-      "Shipped",
-      "Delivered",
-      "Cancelled"
+    customerName: { type: String, default: 'Walk-in Customer' },
+    phone: { type: String },
+    address: { type: String },
+    items: [
+        {
+            productName: { type: String, required: true },
+            category: { type: String, required: true },
+            quantity: { type: Number, required: true },
+            price: { type: Number, required: true }
+        }
     ],
-    default: "Pending"
-  },
-
-  itemsPrice: Number,
-  taxPrice: Number,
-  shippingPrice: Number,
-  totalPrice: Number,
-
-  isDelivered: {
-    type: Boolean,
-    default: false
-  },
-
-  deliveredAt: Date,
-
-  paidAt: Date
-
+    totalAmount: { type: Number, default: 0 },
+    orderStatus: {
+        type: String,
+        enum: ['Pending', 'Confirmed', 'Preparing', 'Delivered', 'Cancelled'],
+        default: 'Pending'
+    },
+    paymentStatus: {
+        type: String,
+        enum: ['Paid', 'Unpaid'],
+        default: 'Unpaid'
+    },
+    scheduleDate: { type: String },
+    scheduleTime: { type: String },
+    type: {
+        type: String,
+        enum: ['Order', 'DirectSale'],
+        default: 'Order'
+    },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    }
 }, { timestamps: true });
 
-module.exports = mongoose.model("Order", orderSchema);
+orderSchema.index({ customerName: 'text' });
+orderSchema.index({ scheduleDate: 1 });
+orderSchema.index({ orderStatus: 1 });
+
+
+orderSchema.pre('save', function () {
+    this.totalAmount = this.items.reduce((total, item) => {
+        return total + (item.price * item.quantity);
+    }, 0);
+});
+
+module.exports = mongoose.model('Order', orderSchema);
