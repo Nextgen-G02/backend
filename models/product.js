@@ -13,7 +13,7 @@ const productSchema = new mongoose.Schema({
 
      pCategory: {
       type: String, 
-      ref: 'Category',
+      // ref: 'Category',
       required: true
     },
 
@@ -33,23 +33,23 @@ const productSchema = new mongoose.Schema({
       required: true
     },
 
-    expiryDate: { 
-      type: Date 
-    },
+    // expiryDate: { 
+    //   type: Date 
+    // },
 
     price: {
       type: Number,
       required: true
     },
 
-    BuyPrice: { 
-      type: Number, 
-      default:0
-    },
+    // BuyPrice: { 
+    //   type: Number, 
+    //   default:0
+    // },
 
     stock: {
       type: Number,
-      default:0
+      required: true
     },
 
     stockStatus: {
