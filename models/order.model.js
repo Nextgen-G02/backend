@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const orderSchema = new mongoose.Schema({
     customerName: { type: String, default: 'Walk-in Customer' },
@@ -48,4 +48,6 @@ orderSchema.pre('save', function () {
     }, 0);
 });
 
-module.exports = mongoose.model('Order', orderSchema);
+
+
+export default mongoose.model('Order', orderSchema);

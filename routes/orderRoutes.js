@@ -1,15 +1,26 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const orderController = require('../Controllers/orderController');
+import * as orderController from '../Controllers/orderController.js';
 
-const { protect } = require('../middleware/authMiddleware');
-const { authorize } = require('../middleware/roleMiddleware');
+import { auth } from '../middleware/authMiddleware.js';
+import { authorizeRoles } from '../middleware/roleMiddleware.js';
 
-router.post('/', protect, orderController.createOrder);
-router.get('/', protect, orderController.getOrders);
-router.get('/:id', protect, orderController.getOrderById);
-router.put('/:id', protect, orderController.updateOrder);
-router.patch('/:id/status', protect, orderController.updateStatus);
-router.delete('/:id', protect, authorize('Admin'), orderController.deleteOrder);
+// router.post('/', auth, orderController.createOrder);
+// router.get('/', auth, orderController.getOrders);
+// router.get('/:id', auth, orderController.getOrderById);
+// router.put('/:id', auth, orderController.updateOrder);
+// router.patch('/:id/status', auth, orderController.updateStatus);
+// router.delete('/:id', auth, authorizeRoles('Admin'), orderController.deleteOrder);
 
-module.exports = router;
+router.post('/', orderController.createOrder);
+router.get('/', orderController.getOrders);
+router.get('/:id', orderController.getOrderById);
+router.put('/:id', orderController.updateOrder);
+router.patch('/:id/status', orderController.updateStatus);
+
+// even admin restriction removed
+router.delete('/:id', orderController.deleteOrder);
+
+
+
+export default router;
