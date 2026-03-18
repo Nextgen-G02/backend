@@ -1,9 +1,9 @@
-const Order = require('../models/Order');
-const Product = require('../models/Product');
-const InventoryHistory = require('../models/InventoryHistory');
+import Order from '../models/order.model.js';
+import Product from '../models/product.model.js';
+// import InventoryHistory from '../models/InventoryHistory.js'; // Model not found
 
 // Create a new order
-exports.createOrder = async (req, res) => {
+export const createOrder = async (req, res) => {
     try {
         const orderData = { ...req.body, createdBy: req.user._id };
 
@@ -23,13 +23,13 @@ exports.createOrder = async (req, res) => {
                 product.stockQuantity -= item.quantity;
                 await product.save();
 
-                const history = new InventoryHistory({
-                    product: product._id,
-                    type: 'OUT',
-                    quantity: item.quantity,
-                    reason: `Order Created: ${order._id}`
-                });
-                await history.save();
+                // const history = new InventoryHistory({
+                //     product: product._id,
+                //     type: 'OUT',
+                //     quantity: item.quantity,
+                //     reason: `Order Created: ${order._id}`
+                // });
+                // await history.save();
             }
         }
 
@@ -40,7 +40,7 @@ exports.createOrder = async (req, res) => {
 };
 
 // Get all orders
-exports.getOrders = async (req, res) => {
+export const getOrders = async (req, res) => {
     try {
         const { customerName, status, date } = req.query;
         let query = {};
@@ -63,7 +63,7 @@ exports.getOrders = async (req, res) => {
 };
 
 // Get a single order
-exports.getOrderById = async (req, res) => {
+export const getOrderById = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
         if (!order) return res.status(404).json({ message: 'Order not found' });
@@ -74,7 +74,7 @@ exports.getOrderById = async (req, res) => {
 };
 
 // Update an order
-exports.updateOrder = async (req, res) => {
+export const updateOrder = async (req, res) => {
     try {
         const order = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
         if (!order) return res.status(404).json({ message: 'Order not found' });
@@ -85,7 +85,7 @@ exports.updateOrder = async (req, res) => {
 };
 
 // Update order status
-exports.updateStatus = async (req, res) => {
+export const updateStatus = async (req, res) => {
     try {
         const order = await Order.findByIdAndUpdate(
             req.params.id,
@@ -100,7 +100,7 @@ exports.updateStatus = async (req, res) => {
 };
 
 // Delete an order
-exports.deleteOrder = async (req, res) => {
+export const deleteOrder = async (req, res) => {
     try {
         const order = await Order.findByIdAndDelete(req.params.id);
         if (!order) return res.status(404).json({ message: 'Order not found' });
