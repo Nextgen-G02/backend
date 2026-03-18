@@ -5,9 +5,15 @@ import app from './app.js';
 
 const PORT = process.env.PORT || 5000;
 const MONGODB_URL = process.env.MONGODB_URL;
+const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!MONGODB_URL) {
     console.error("MONGODB_URL missing");
+    process.exit(1);
+}
+
+if (!JWT_SECRET) {
+    console.error("JWT_SECRET missing");
     process.exit(1);
 }
 
