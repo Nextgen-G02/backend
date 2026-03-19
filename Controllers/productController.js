@@ -23,10 +23,6 @@ const getProducts = async (req, res) => {
   }
 };
 
-//  export { addProduct, getProducts };
-
-
-
 const deleteProduct = async (req, res) => {
   try {
         const product = await Product.findByIdAndDelete(req.params.id);
