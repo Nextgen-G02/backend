@@ -5,7 +5,10 @@ import Product from '../models/product.model.js';
 // Create a new order
 export const createOrder = async (req, res) => {
     try {
-        const orderData = { ...req.body, createdBy: req.user._id };
+        const orderData = { ...req.body };
+        if (req.user) {
+            orderData.createdBy = req.user._id;
+        }
 
         // Default values for Direct Sales
         if (orderData.type === 'DirectSale') {
@@ -18,9 +21,18 @@ export const createOrder = async (req, res) => {
 
         // Reduce stock for each item in the order
         for (const item of order.items) {
-            const product = await Product.findOne({ productName: item.productName });
+            const product = await Product.findOne({
+                $or: [
+                    { productName: item.productName },
+                    { pName: item.productName }
+                ]
+            });
             if (product) {
-                product.stockQuantity -= item.quantity;
+                if (product.stock !== undefined) {
+                    product.stock -= item.quantity;
+                } else if (product.stockQuantity !== undefined) {
+                    product.stockQuantity -= item.quantity;
+                }
                 await product.save();
 
                 // const history = new InventoryHistory({
@@ -76,8 +88,30 @@ export const getOrderById = async (req, res) => {
 // Update an order
 export const updateOrder = async (req, res) => {
     try {
+        const oldOrder = await Order.findById(req.params.id);
+        if (!oldOrder) return res.status(404).json({ message: 'Order not found' });
+
         const order = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-        if (!order) return res.status(404).json({ message: 'Order not found' });
+
+        // If status changed to Cancelled, restore stock
+        if (req.body.orderStatus === 'Cancelled' && oldOrder.orderStatus !== 'Cancelled') {
+            for (const item of order.items) {
+                const product = await Product.findOne({
+                    $or: [
+                        { productName: item.productName },
+                        { pName: item.productName }
+                    ]
+                });
+                if (product) {
+                    if (product.stock !== undefined) {
+                        product.stock += item.quantity;
+                    } else if (product.stockQuantity !== undefined) {
+                        product.stockQuantity += item.quantity;
+                    }
+                    await product.save();
+                }
+            }
+        }
         res.json(order);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -87,12 +121,35 @@ export const updateOrder = async (req, res) => {
 // Update order status
 export const updateStatus = async (req, res) => {
     try {
+        const oldOrder = await Order.findById(req.params.id);
+        if (!oldOrder) return res.status(404).json({ message: 'Order not found' });
+
         const order = await Order.findByIdAndUpdate(
             req.params.id,
             { orderStatus: req.body.orderStatus },
             { new: true }
         );
-        if (!order) return res.status(404).json({ message: 'Order not found' });
+
+        // If status changed to Cancelled, restore stock
+        if (req.body.orderStatus === 'Cancelled' && oldOrder.orderStatus !== 'Cancelled') {
+            for (const item of order.items) {
+                const product = await Product.findOne({
+                    $or: [
+                        { productName: item.productName },
+                        { pName: item.productName }
+                    ]
+                });
+                if (product) {
+                    if (product.stock !== undefined) {
+                        product.stock += item.quantity;
+                    } else if (product.stockQuantity !== undefined) {
+                        product.stockQuantity += item.quantity;
+                    }
+                    await product.save();
+                }
+            }
+        }
+
         res.json(order);
     } catch (error) {
         res.status(400).json({ message: error.message });

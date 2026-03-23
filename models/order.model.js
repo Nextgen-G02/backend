@@ -32,8 +32,7 @@ const orderSchema = new mongoose.Schema({
     },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+        ref: 'User'
     }
 }, { timestamps: true });
 
@@ -42,7 +41,7 @@ orderSchema.index({ scheduleDate: 1 });
 orderSchema.index({ orderStatus: 1 });
 
 
-orderSchema.pre('save', function () {
+orderSchema.pre('save', async function () {
     this.totalAmount = this.items.reduce((total, item) => {
         return total + (item.price * item.quantity);
     }, 0);

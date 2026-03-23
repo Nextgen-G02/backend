@@ -1,6 +1,5 @@
-import product from '../models/product.model.js';
+import Product from '../models/product.model.js';
 
-import React from 'react'
 export const addProduct = async (req, res) => {
     try {
         const { 
@@ -14,7 +13,7 @@ export const addProduct = async (req, res) => {
             stock
          } = req.body;
 
-         const existingProduct = await product.findOne({ productId });
+         const existingProduct = await Product.findOne({ productId });
             if (existingProduct) {
                 return res.status(400).json({ 
                     success:false,
@@ -53,6 +52,21 @@ export const addProduct = async (req, res) => {
         res.status(500).json({
             success:false,
             message: 'Failed to add product',
+            error: error.message
+        });
+    }
+};
+export const getProducts = async (req, res) => {
+    try {
+        const products = await Product.find({});
+        res.status(200).json({
+            success: true,
+            data: products
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch products',
             error: error.message
         });
     }
