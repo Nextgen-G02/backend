@@ -1,16 +1,23 @@
+import express from 'express';
+const router = express.Router();
+import * as orderController from '../Controllers/orderController.js';
 import Order from '../models/order.model.js';
 import Product from '../models/product.model.js';
-// import InventoryHistory from '../models/InventoryHistory.js'; // Model not found
 
-// Create a new order
+
+// =========================
+// CREATE ORDER
+// =========================
 export const createOrder = async (req, res) => {
     try {
         const orderData = { ...req.body };
+
+        // ✅ Add createdBy if user exists
         if (req.user) {
             orderData.createdBy = req.user._id;
         }
 
-        // Default values for Direct Sales
+        // ✅ Default values for DirectSale
         if (orderData.type === 'DirectSale') {
             orderData.orderStatus = 'Delivered';
             orderData.paymentStatus = 'Paid';
@@ -19,39 +26,38 @@ export const createOrder = async (req, res) => {
         const order = new Order(orderData);
         await order.save();
 
-        // Reduce stock for each item in the order
+        // 🔥 FIXED: use item.pName (NOT productName)
         for (const item of order.items) {
             const product = await Product.findOne({
-                $or: [
-                    { productName: item.productName },
-                    { pName: item.productName }
-                ]
+                pName: item.pName   // ✅ CHANGED HERE
             });
-            if (product) {
-                if (product.stock !== undefined) {
-                    product.stock -= item.quantity;
-                } else if (product.stockQuantity !== undefined) {
-                    product.stockQuantity -= item.quantity;
-                }
-                await product.save();
 
-                // const history = new InventoryHistory({
-                //     product: product._id,
-                //     type: 'OUT',
-                //     quantity: item.quantity,
-                //     reason: `Order Created: ${order._id}`
-                // });
-                // await history.save();
+            // 🔥 NEW: product existence check
+            if (!product) {
+                throw new Error(`Product not found: ${item.pName}`);
             }
+
+            // 🔥 NEW: stock validation
+            if (product.stock < item.quantity) {
+                throw new Error(`Not enough stock for ${product.pName}`);
+            }
+
+            // ✅ Reduce stock
+            product.stock -= item.quantity;
+            await product.save();
         }
 
         res.status(201).json(order);
+
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 };
 
-// Get all orders
+
+// =========================
+// GET ALL ORDERS
+// =========================
 export const getOrders = async (req, res) => {
     try {
         const { customerName, status, date } = req.query;
@@ -60,69 +66,95 @@ export const getOrders = async (req, res) => {
         if (customerName) {
             query.customerName = { $regex: customerName, $options: 'i' };
         }
+
         if (status) {
             query.orderStatus = status;
         }
+
         if (date) {
             query.scheduleDate = date;
         }
 
         const orders = await Order.find(query).sort({ createdAt: -1 });
+
         res.json(orders);
+
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// Get a single order
+
+// =========================
+// GET ORDER BY ID
+// =========================
 export const getOrderById = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).json({ message: 'Order not found' });
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
         res.json(order);
+
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// Update an order
+
+// =========================
+// UPDATE ORDER
+// =========================
 export const updateOrder = async (req, res) => {
     try {
         const oldOrder = await Order.findById(req.params.id);
-        if (!oldOrder) return res.status(404).json({ message: 'Order not found' });
 
-        const order = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        if (!oldOrder) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
 
-        // If status changed to Cancelled, restore stock
+        const order = await Order.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+
+        // 🔥 If order cancelled → restore stock
         if (req.body.orderStatus === 'Cancelled' && oldOrder.orderStatus !== 'Cancelled') {
+
             for (const item of order.items) {
+
                 const product = await Product.findOne({
-                    $or: [
-                        { productName: item.productName },
-                        { pName: item.productName }
-                    ]
+                    pName: item.pName   // ✅ CHANGED HERE
                 });
+
                 if (product) {
-                    if (product.stock !== undefined) {
-                        product.stock += item.quantity;
-                    } else if (product.stockQuantity !== undefined) {
-                        product.stockQuantity += item.quantity;
-                    }
+                    product.stock += item.quantity;  // restore stock
                     await product.save();
                 }
             }
         }
+
         res.json(order);
+
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 };
 
-// Update order status
+
+// =========================
+// UPDATE ORDER STATUS ONLY
+// =========================
 export const updateStatus = async (req, res) => {
     try {
         const oldOrder = await Order.findById(req.params.id);
-        if (!oldOrder) return res.status(404).json({ message: 'Order not found' });
+
+        if (!oldOrder) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
 
         const order = await Order.findByIdAndUpdate(
             req.params.id,
@@ -130,39 +162,46 @@ export const updateStatus = async (req, res) => {
             { new: true }
         );
 
-        // If status changed to Cancelled, restore stock
+        // 🔥 If status changed to Cancelled → restore stock
         if (req.body.orderStatus === 'Cancelled' && oldOrder.orderStatus !== 'Cancelled') {
+
             for (const item of order.items) {
+
                 const product = await Product.findOne({
-                    $or: [
-                        { productName: item.productName },
-                        { pName: item.productName }
-                    ]
+                    pName: item.pName   // ✅ CHANGED HERE
                 });
+
                 if (product) {
-                    if (product.stock !== undefined) {
-                        product.stock += item.quantity;
-                    } else if (product.stockQuantity !== undefined) {
-                        product.stockQuantity += item.quantity;
-                    }
+                    product.stock += item.quantity;
                     await product.save();
                 }
             }
         }
 
         res.json(order);
+
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 };
 
-// Delete an order
+
+// =========================
+// DELETE ORDER
+// =========================
 export const deleteOrder = async (req, res) => {
     try {
         const order = await Order.findByIdAndDelete(req.params.id);
-        if (!order) return res.status(404).json({ message: 'Order not found' });
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
         res.json({ message: 'Order deleted successfully' });
+
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
+
+
