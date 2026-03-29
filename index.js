@@ -5,15 +5,10 @@ dotenv.config();
 import mongoose from 'mongoose';
 import app from './app.js';
 
-<<<<<<< HEAD
-const PORT = process.env.PORT || 5000;
-const MONGODB_URL = process.env.MONGODB_URL;
-const JWT_SECRET = process.env.JWT_SECRET;
-=======
->>>>>>> 26fcbcb23a943d5298f0f05dcf9a50814e6bb061
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
+const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!MONGO_URI) {
     console.error("MONGO_URI missing");
