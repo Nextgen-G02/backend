@@ -26,7 +26,7 @@ export const registerUser = async (req, res) => {
             firstName,
             lastName,
             email,
-            password: hashedPassword
+            password: hashedPassword,
         });
 
         const token = generateToken(user);
@@ -73,10 +73,11 @@ export const loginUser = async (req, res) => {
 
         if(!isMatch){
             return res.status(401).json({
-                message: "Invalid credentials"
+                message: "Invalid email or password"
             });
         }
 
+        //generate token
         const token = generateToken(user);
 
         res.status(200).json({
