@@ -5,19 +5,17 @@ import Order from '../models/order.model.js';
 import Product from '../models/product.model.js';
 
 
-// =========================
+
 // CREATE ORDER
-// =========================
 export const createOrder = async (req, res) => {
     try {
         const orderData = { ...req.body };
 
-        // ✅ Add createdBy if user exists
         if (req.user) {
             orderData.createdBy = req.user._id;
         }
 
-        // ✅ Default values for DirectSale
+        //  Default values for DirectSale
         if (orderData.type === 'DirectSale') {
             orderData.orderStatus = 'Delivered';
             orderData.paymentStatus = 'Paid';
@@ -26,23 +24,23 @@ export const createOrder = async (req, res) => {
         const order = new Order(orderData);
         await order.save();
 
-        // 🔥 FIXED: use item.pName (NOT productName)
+        //  FIXED: use item.pName (NOT productName)
         for (const item of order.items) {
             const product = await Product.findOne({
-                pName: item.pName   // ✅ CHANGED HERE
+                pName: item.pName   //  CHANGED HERE
             });
 
-            // 🔥 NEW: product existence check
+            //  NEW: product existence check
             if (!product) {
                 throw new Error(`Product not found: ${item.pName}`);
             }
 
-            // 🔥 NEW: stock validation
+            //  NEW: stock validation
             if (product.stock < item.quantity) {
                 throw new Error(`Not enough stock for ${product.pName}`);
             }
 
-            // ✅ Reduce stock
+            //  Reduce stock
             product.stock -= item.quantity;
             await product.save();
         }
@@ -55,9 +53,8 @@ export const createOrder = async (req, res) => {
 };
 
 
-// =========================
+
 // GET ALL ORDERS
-// =========================
 export const getOrders = async (req, res) => {
     try {
         const { customerName, status, date } = req.query;
@@ -85,9 +82,9 @@ export const getOrders = async (req, res) => {
 };
 
 
-// =========================
+
 // GET ORDER BY ID
-// =========================
+
 export const getOrderById = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
@@ -104,9 +101,8 @@ export const getOrderById = async (req, res) => {
 };
 
 
-// =========================
+
 // UPDATE ORDER
-// =========================
 export const updateOrder = async (req, res) => {
     try {
         const oldOrder = await Order.findById(req.params.id);
@@ -121,13 +117,13 @@ export const updateOrder = async (req, res) => {
             { new: true, runValidators: true }
         );
 
-        // 🔥 If order cancelled → restore stock
+        //  If order cancelled → restore stock
         if (req.body.orderStatus === 'Cancelled' && oldOrder.orderStatus !== 'Cancelled') {
 
             for (const item of order.items) {
 
                 const product = await Product.findOne({
-                    pName: item.pName   // ✅ CHANGED HERE
+                    pName: item.pName   //  CHANGED HERE
                 });
 
                 if (product) {
@@ -145,9 +141,8 @@ export const updateOrder = async (req, res) => {
 };
 
 
-// =========================
+
 // UPDATE ORDER STATUS ONLY
-// =========================
 export const updateStatus = async (req, res) => {
     try {
         const oldOrder = await Order.findById(req.params.id);
@@ -162,13 +157,13 @@ export const updateStatus = async (req, res) => {
             { new: true }
         );
 
-        // 🔥 If status changed to Cancelled → restore stock
+        //  If status changed to Cancelled → restore stock
         if (req.body.orderStatus === 'Cancelled' && oldOrder.orderStatus !== 'Cancelled') {
 
             for (const item of order.items) {
 
                 const product = await Product.findOne({
-                    pName: item.pName   // ✅ CHANGED HERE
+                    pName: item.pName   // CHANGED HERE
                 });
 
                 if (product) {
@@ -186,9 +181,8 @@ export const updateStatus = async (req, res) => {
 };
 
 
-// =========================
+
 // DELETE ORDER
-// =========================
 export const deleteOrder = async (req, res) => {
     try {
         const order = await Order.findByIdAndDelete(req.params.id);
