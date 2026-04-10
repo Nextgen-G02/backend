@@ -1,4 +1,4 @@
-import Product from '../models/Product.js';
+import Product from "../models/product.js";
 
 
 // add new product
@@ -18,9 +18,19 @@ const getProducts = async (req, res) => {
     const products = await Product.find();
     res.json(products);
 
-  } catch (err) {
+  } catch (error) {
     res.status(500).json({ message: "Failed to fetch products", error: err.message });
   }
+};
+
+const updateProduct = async (req, res) => {
+    try {
+        const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!product) return res.status(404).json({ message: 'Product not found' });
+        res.json(product);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
 };
 
 const deleteProduct = async (req, res) => {
@@ -33,4 +43,4 @@ const deleteProduct = async (req, res) => {
     }
 };
 
- export { addProduct, getProducts, deleteProduct };
+ export { addProduct, getProducts,updateProduct, deleteProduct };

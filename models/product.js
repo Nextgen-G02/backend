@@ -3,8 +3,8 @@ import mongoose from 'mongoose';
 const productSchema = new mongoose.Schema({
     productId:{
         type: String,
-        required: true,
-        unique: true
+        // required: true,
+        // unique: true
     },
     pName:{
         type: String,
@@ -61,6 +61,7 @@ const productSchema = new mongoose.Schema({
 
 );
 
-const Product = mongoose.model("Product", productSchema);
+// const Product = mongoose.model("Product", productSchema);
+const Product = mongoose.models.Product || mongoose.model("Product", productSchema);
 
 export default Product;
