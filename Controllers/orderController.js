@@ -1,4 +1,5 @@
 import Order from '../models/order.model.js';
+import Product from '../models/Product.js';
 // import Product from '../models/product.model.js';
 // import InventoryHistory from '../models/InventoryHistory.js'; // Model not found
 

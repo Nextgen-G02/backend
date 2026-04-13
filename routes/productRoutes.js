@@ -1,6 +1,6 @@
 import express from 'express';
 import Product from "../models/product.js";
-import { addProduct ,deleteProduct,getProducts,} from "../Controllers/productController.js";
+import { addProduct ,deleteProduct,getProducts, updateProduct,} from "../Controllers/productController.js";
 
 const routes = express.Router();
 
@@ -21,7 +21,7 @@ routes.get("/category/:category", async (req, res) => {
 });
 
 // routes.get("/get/:id", getProductById);
-// routes.put("/update/:id", updateProduct);
+routes.put("/update/:id", updateProduct);
 routes.delete("/delete/:id", deleteProduct);
 
 
