@@ -3,6 +3,10 @@ const router = express.Router();
 import * as orderController from '../Controllers/orderController.js';
 import Order from '../models/order.model.js';
 import Product from '../models/product.model.js';
+import Inventory from '../models/Inventory.js';
+import Customer from '../models/customer.model.js';
+
+
 
 
 
@@ -24,6 +28,19 @@ export const createOrder = async (req, res) => {
         const order = new Order(orderData);
         await order.save();
 
+        // Update/Create Customer record
+        if (order.phone) {
+            await Customer.findOneAndUpdate(
+                { phone: order.phone },
+                { 
+                    $set: { name: order.customerName, address: order.address, lastOrderDate: Date.now() },
+                    $inc: { totalOrders: 1, totalSpent: order.totalAmount }
+                },
+                { upsert: true, new: true }
+            );
+        }
+
+
         //  FIXED: use item.pName (NOT productName)
         for (const item of order.items) {
             const product = await Product.findOne({
@@ -43,7 +60,18 @@ export const createOrder = async (req, res) => {
             //  Reduce stock
             product.stock -= item.quantity;
             await product.save();
+
+            //  Update Inventory model
+            await Inventory.findOneAndUpdate(
+                { productId: product._id },
+                { 
+                    quantity: product.stock,
+                    lastUpdated: Date.now()
+                },
+                { upsert: true }
+            );
         }
+
 
         res.status(201).json(order);
 
@@ -129,9 +157,20 @@ export const updateOrder = async (req, res) => {
                 if (product) {
                     product.stock += item.quantity;  // restore stock
                     await product.save();
+
+                    // Sync Inventory
+                    await Inventory.findOneAndUpdate(
+                        { productId: product._id },
+                        { 
+                            quantity: product.stock,
+                            lastUpdated: Date.now()
+                        },
+                        { upsert: true }
+                    );
                 }
             }
         }
+
 
         res.json(order);
 

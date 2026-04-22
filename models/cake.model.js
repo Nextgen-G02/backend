@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const cakeSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -10,5 +10,5 @@ const cakeSchema = new mongoose.Schema({
     stock: { type: Number, default: 0 }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Cake', cakeSchema);
-//create a model for cake with name, description, price, category, image, weight and stock. The category should be a reference to the category model.
+const Cake = mongoose.model('Cake', cakeSchema);
+export default Cake;

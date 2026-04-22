@@ -9,8 +9,14 @@ const orderSchema = new mongoose.Schema({
             pName: { type: String, required: true },
             category: { type: String, required: true },
             quantity: { type: Number, required: true },
-            price: { type: Number, required: true }
+            price: { type: Number, required: true },
+            customization: {
+                message: { type: String },
+                flavor: { type: String },
+                specialInstructions: { type: String }
+            }
         }
+
     ],
     totalAmount: { type: Number, default: 0 },
     orderStatus: {

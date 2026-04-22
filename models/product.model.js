@@ -32,7 +32,7 @@ const productSchema = new mongoose.Schema({
       required: true
     },
 
-     price: {
+    price: {
       type: Number,
       required: true
     },
@@ -46,7 +46,24 @@ const productSchema = new mongoose.Schema({
       type: String,
       enum: ["In Stock", "Out of Stock", "Low Stock"],
       default: "In Stock"
-    }
+    },
+
+    // Customization Fields
+    isCustomizable: {
+      type: Boolean,
+      default: false
+    },
+    flavors: [
+      {
+        type: String
+      }
+    ],
+    weightOptions: [
+      {
+        weight: Number,
+        priceMultiplier: { type: Number, default: 1 }
+      }
+    ]
 },
 
 );

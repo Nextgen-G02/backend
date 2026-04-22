@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const saleSchema = new mongoose.Schema({
   productId: {
@@ -32,4 +32,5 @@ const saleSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model("Sale", saleSchema);
+const Sale = mongoose.model("Sale", saleSchema);
+export default Sale;

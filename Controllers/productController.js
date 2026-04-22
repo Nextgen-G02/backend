@@ -71,3 +71,21 @@ export const getProducts = async (req, res) => {
         });
     }
 };
+
+export const getProductsByCategory = async (req, res) => {
+    try {
+        const { category } = req.params;
+        // Improved regex to match singular and plural (e.g., "cake" matches "Cakes")
+        const products = await Product.find({ 
+            pCategory: { $regex: new RegExp(`^${category}s?$`, 'i') } 
+        });
+        
+        res.status(200).json(products);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch products by category',
+            error: error.message
+        });
+    }
+};

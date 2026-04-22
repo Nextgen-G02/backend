@@ -4,12 +4,8 @@ import * as orderController from '../Controllers/orderController.js';
 import { auth } from '../middleware/authMiddleware.js';
 import { authorizeRoles } from '../middleware/roleMiddleware.js';
 
-// router.post('/', auth, orderController.createOrder);
-// router.get('/', auth, orderController.getOrders);
-// router.get('/:id', auth, orderController.getOrderById);
-// router.put('/:id', auth, orderController.updateOrder);
-// router.patch('/:id/status', auth, orderController.updateStatus);
-// router.delete('/:id', auth, authorizeRoles('Admin'), orderController.deleteOrder);
+// Apply auth to all order routes
+router.use(auth);
 
 router.post('/', orderController.createOrder);
 router.get('/', orderController.getOrders);
@@ -17,7 +13,8 @@ router.get('/:id', orderController.getOrderById);
 router.put('/:id', orderController.updateOrder);
 router.patch('/:id/status', orderController.updateStatus);
 
-// even admin restriction removed
-router.delete('/:id', orderController.deleteOrder);
+// Restricted to Admin only
+router.delete('/:id', authorizeRoles('admin'), orderController.deleteOrder);
 
 export default router;
+
