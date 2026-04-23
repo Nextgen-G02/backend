@@ -3,6 +3,8 @@ import { getFinancialSummary } from '../../Controllers/system/financialControlle
 import { auth } from '../../middleware/authMiddleware.js';
 import { authorizeRoles } from '../../middleware/roleMiddleware.js';
 
+
+//Routes for financial summary and reports
 const router = express.Router();
 
 router.use(auth);
