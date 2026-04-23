@@ -1,38 +1,50 @@
 const Product = require('../models/Product');
 const InventoryHistory = require('../models/InventoryHistory');
 
+// Get all inventory
 exports.getInventory = async (req, res) => {
     try {
         const products = await Product.find().populate('category');
-        res.json(products);
+        return res.status(200).json(products);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 };
 
+// Get low stock products
 exports.getLowStock = async (req, res) => {
     try {
-        // Assuming minimum stock is 5 for now
-        const products = await Product.find({ stockQuantity: { $lte: 5 } }).populate('category');
-        res.json(products);
+        const MIN_STOCK = 5; // constant for easy change later
+        const products = await Product.find({
+            stockQuantity: { $lte: MIN_STOCK }
+        }).populate('category');
+
+        return res.status(200).json(products);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 };
 
+// Adjust stock (IN / OUT)
 exports.adjustStock = async (req, res) => {
     try {
-        const { productId, type, quantity, reason } = req.body;
+        let { productId, type, quantity, reason } = req.body;
+        quantity = Number(quantity); // ensure number
+
         const product = await Product.findById(productId);
-        if (!product) return res.status(404).json({ message: 'Product not found' });
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
 
         if (type === 'IN') {
-            product.stockQuantity += Number(quantity);
+            product.stockQuantity += quantity;
         } else if (type === 'OUT') {
             if (product.stockQuantity < quantity) {
                 return res.status(400).json({ message: 'Insufficient stock' });
             }
-            product.stockQuantity -= Number(quantity);
+            product.stockQuantity -= quantity;
+        } else {
+            return res.status(400).json({ message: 'Invalid type (IN or OUT)' });
         }
 
         await product.save();
@@ -43,21 +55,26 @@ exports.adjustStock = async (req, res) => {
             quantity,
             reason
         });
+
         await history.save();
 
-        res.json({ product, history });
+        return res.status(200).json({ product, history });
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        return res.status(400).json({ message: error.message });
     }
 };
 
+// Get product history
 exports.getHistory = async (req, res) => {
     try {
-        const history = await InventoryHistory.find({ product: req.params.productId })
+        const history = await InventoryHistory.find({
+            product: req.params.productId
+        })
             .sort({ date: -1 })
             .populate('product');
-        res.json(history);
+
+        return res.status(200).json(history);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 };
