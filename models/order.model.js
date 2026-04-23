@@ -6,11 +6,18 @@ const orderSchema = new mongoose.Schema({
     address: { type: String },
     items: [
         {
-            productName: { type: String, required: true },
+            pName: { type: String, required: true },
             category: { type: String, required: true },
             quantity: { type: Number, required: true },
-            price: { type: Number, required: true }
+            price: { type: Number, required: true },
+            description: { type: String },
+            customization: {
+                message: { type: String },
+                flavor: { type: String },
+                specialInstructions: { type: String }
+            }
         }
+
     ],
     totalAmount: { type: Number, default: 0 },
     orderStatus: {
@@ -32,8 +39,7 @@ const orderSchema = new mongoose.Schema({
     },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+        ref: 'User'
     }
 }, { timestamps: true });
 
@@ -42,7 +48,7 @@ orderSchema.index({ scheduleDate: 1 });
 orderSchema.index({ orderStatus: 1 });
 
 
-orderSchema.pre('save', function () {
+orderSchema.pre('save', async function () {
     this.totalAmount = this.items.reduce((total, item) => {
         return total + (item.price * item.quantity);
     }, 0);
