@@ -8,6 +8,7 @@ import inventoryRoutes from "./routes/inventoryRoutes.js";
 import customerRoutes from "./routes/customerRoutes.js";
 import financialRoutes from "./routes/financialRoutes.js";
 import supplierRoutes from "./routes/supplierRoutes.js";
+import purchaseRoutes from "./routes/purchaseRoutes.js";
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use("/api/inventory", inventoryRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/financial", financialRoutes);
 app.use("/api/suppliers", supplierRoutes);
+app.use("/api/purchases", purchaseRoutes);
 
 
 export default app;

@@ -24,10 +24,10 @@ const supplierSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
-  category: {
+  productsSupplied: {
     type: String,
-    enum: ["Raw Materials", "Packaging", "Prepared Goods", "Equipment", "Other"],
-    default: "Raw Materials",
+    required: [true, "Products supplied are required"],
+    trim: true,
   },
   status: {
     type: String,

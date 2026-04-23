@@ -29,7 +29,7 @@ const productSchema = new mongoose.Schema({
 
     weight: {
       type: Number,   
-      required: true
+      required: false
     },
 
     price: {
@@ -37,9 +37,29 @@ const productSchema = new mongoose.Schema({
       required: true
     },
 
+    costPrice: {
+      type: Number,
+      required: true
+    },
+
     stock: {
       type: Number,
       required: true
+    },
+
+    expiryDate: {
+      type: Date
+    },
+
+    unit: {
+      type: String,
+      required: true
+    },
+
+    status: {
+      type: String,
+      enum: ["Active", "Inactive"],
+      default: "Active"
     },
 
     stockStatus: {

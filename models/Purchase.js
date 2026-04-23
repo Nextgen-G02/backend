@@ -1,27 +1,39 @@
 import mongoose from "mongoose";
 
 const purchaseSchema = new mongoose.Schema({
-  productId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Product",
-    required: true
-  },
-  quantityAdded: {
-    type: Number,
-    required: true
-  },
-  buyingPrice: {
-    type: Number,
-    required: true
-  },
-  totalCost: {
-    type: Number,
-    required: true
-  },
   supplier: {
-    type: String
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Supplier",
+    required: true
   },
-  date: {
+  productName: {
+    type: String,
+    required: true
+  },
+  quantity: {
+    type: Number,
+    required: true
+  },
+  unitPrice: {
+    type: Number,
+    required: true,
+    default: 0
+  },
+  cost: {
+    type: Number,
+    required: true
+  },
+  paidAmount: {
+    type: Number,
+    required: true,
+    default: 0
+  },
+  balance: {
+    type: Number,
+    required: true,
+    default: 0
+  },
+  supplyDate: {
     type: Date,
     default: Date.now
   }

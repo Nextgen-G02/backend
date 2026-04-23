@@ -3,7 +3,7 @@ import Product from '../models/product.model.js';
 
 export const getInventory = async (req, res) => {
     try {
-        const inventory = await Inventory.find().populate('productId', 'pName stockStatus');
+        const inventory = await Inventory.find().populate('productId', 'pName stockStatus productId images');
         res.status(200).json({ success: true, data: inventory });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

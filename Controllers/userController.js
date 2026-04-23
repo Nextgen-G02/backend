@@ -169,3 +169,30 @@ export const deleteUser = async (req, res) => {
     }
 };
 
+// UPDATE USER
+export const updateUser = async (req, res) => {
+    try {
+        const { firstName, lastName, email, role, password } = req.body;
+        const updateData = { firstName, lastName, email, role };
+
+        if (password) {
+            updateData.password = await bcrypt.hash(password, 10);
+        }
+
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true }
+        ).select('-password');
+
+        res.status(200).json({ success: true, data: updatedUser, message: 'User updated successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
