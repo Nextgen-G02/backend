@@ -1,39 +1,44 @@
 import mongoose from "mongoose";
 
-const supplierSchema = new mongoose.Schema(
-    {
-        supplierName: {
-            type: String,
-            required: true,
-        },
+const supplierSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, "Supplier name is required"],
+    trim: true,
+  },
+  contactPerson: {
+    type: String,
+    trim: true,
+  },
+  phone: {
+    type: String,
+    required: [true, "Phone number is required"],
+    trim: true,
+  },
+  email: {
+    type: String,
+    trim: true,
+    lowercase: true,
+  },
+  address: {
+    type: String,
+    trim: true,
+  },
+  productsSupplied: {
+    type: String,
+    required: [true, "Products supplied are required"],
+    trim: true,
+  },
+  status: {
+    type: String,
+    enum: ["Active", "Inactive"],
+    default: "Active",
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
 
-        phone: {
-            type: String,
-            required: true,
-        },
-
-        email: {
-            type: String,
-        },
-
-        address: {
-            type: String,
-        },
-
-        suppliedProducts: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'Product' 
-            }
-        ],
-
-        status: {
-            type: String,
-            enum: ['active', 'inactive'],
-            default: 'active'
-        }
-    },
-    { timestamps: true }
-);
-
-export default mongoose.model("Supplier", supplierSchema);
+const Supplier = mongoose.model("Supplier", supplierSchema);
+export default Supplier;
