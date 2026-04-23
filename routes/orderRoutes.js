@@ -1,7 +1,6 @@
 import express from 'express';
 const router = express.Router();
 import * as orderController from '../Controllers/orderController.js';
-
 import { auth } from '../middleware/authMiddleware.js';
 import { authorizeRoles } from '../middleware/roleMiddleware.js';
 
@@ -20,7 +19,5 @@ router.patch('/:id/status', orderController.updateStatus);
 
 // even admin restriction removed
 router.delete('/:id', orderController.deleteOrder);
-
-
 
 export default router;
