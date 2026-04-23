@@ -1,4 +1,4 @@
-import Product from '../models/product.model.js';
+import Product from '../../models/product.model.js';
 
 export const addProduct = async (req, res) => {
     try {
@@ -124,3 +124,4 @@ export const deleteProduct = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+

@@ -1,7 +1,7 @@
 import express from 'express';
-import { getInventory, updateLowStockThreshold, syncInventory } from '../Controllers/inventoryController.js';
-import { auth } from '../middleware/authMiddleware.js';
-import { authorizeRoles } from '../middleware/roleMiddleware.js';
+import { getInventory, updateLowStockThreshold, syncInventory } from '../../Controllers/system/inventoryController.js';
+import { auth } from '../../middleware/authMiddleware.js';
+import { authorizeRoles } from '../../middleware/roleMiddleware.js';
 
 const router = express.Router();
 

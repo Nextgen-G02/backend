@@ -1,20 +1,25 @@
 import express from "express";
 import cors from "cors";
-import userRouter from "./routes/userRoutes.js";
-import productRoutes from "./routes/productRoutes.js";
-import orderRoutes from "./routes/orderRoutes.js";
-import categoryRoutes from "./routes/categoryRoutes.js";
-import inventoryRoutes from "./routes/inventoryRoutes.js";
-import customerRoutes from "./routes/customerRoutes.js";
-import financialRoutes from "./routes/financialRoutes.js";
-import supplierRoutes from "./routes/supplierRoutes.js";
-import purchaseRoutes from "./routes/purchaseRoutes.js";
+
+// Web Routes
+import userRouter from "./routes/web/userRoutes.js";
+
+// System Routes
+import productRoutes from "./routes/system/productRoutes.js";
+import orderRoutes from "./routes/system/orderRoutes.js";
+import categoryRoutes from "./routes/system/categoryRoutes.js";
+import inventoryRoutes from "./routes/system/inventoryRoutes.js";
+import customerRoutes from "./routes/system/customerRoutes.js";
+import financialRoutes from "./routes/system/financialRoutes.js";
+import supplierRoutes from "./routes/system/supplierRoutes.js";
+import purchaseRoutes from "./routes/system/purchaseRoutes.js";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
+// API Endpoints
 app.use("/api/auth", userRouter);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
@@ -27,6 +32,3 @@ app.use("/api/purchases", purchaseRoutes);
 
 
 export default app;
-
-
-

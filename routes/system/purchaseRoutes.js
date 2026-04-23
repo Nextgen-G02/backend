@@ -3,9 +3,9 @@ import {
   getSupplierPurchases, 
   createPurchase, 
   deletePurchase 
-} from "../Controllers/purchaseController.js";
-import { auth } from "../middleware/authMiddleware.js";
-import { authorizeRoles } from "../middleware/roleMiddleware.js";
+} from "../../Controllers/system/purchaseController.js";
+import { auth } from "../../middleware/authMiddleware.js";
+import { authorizeRoles } from "../../middleware/roleMiddleware.js";
 
 const router = express.Router();
 

@@ -1,7 +1,7 @@
 import express from 'express';
-import { createCategory, getCategories, deleteCategory, updateCategory } from '../Controllers/categoryController.js';
-import { auth } from '../middleware/authMiddleware.js';
-import { authorizeRoles } from '../middleware/roleMiddleware.js';
+import { getCategories, createCategory, updateCategory, deleteCategory } from '../../Controllers/system/categoryController.js';
+import { auth } from '../../middleware/authMiddleware.js';
+import { authorizeRoles } from '../../middleware/roleMiddleware.js';
 
 const router = express.Router();
 

@@ -1,4 +1,4 @@
-import Category from '../models/category.model.js';
+import Category from '../../models/category.model.js';
 
 export const createCategory = async (req, res) => {
     try {
@@ -48,3 +48,4 @@ export const updateCategory = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+

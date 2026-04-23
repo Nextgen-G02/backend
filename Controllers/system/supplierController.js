@@ -1,4 +1,4 @@
-import Supplier from "../models/Supplier.js";
+import Supplier from "../../models/Supplier.js";
 
 // @desc    Get all suppliers
 // @route   GET /api/suppliers
@@ -66,3 +66,4 @@ export const deleteSupplier = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+

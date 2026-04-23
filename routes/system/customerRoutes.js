@@ -1,7 +1,7 @@
 import express from 'express';
-import { getCustomers, getCustomerByPhone, deleteCustomer } from '../Controllers/customerController.js';
-import { auth } from '../middleware/authMiddleware.js';
-import { authorizeRoles } from '../middleware/roleMiddleware.js';
+import { getCustomers, getCustomerByPhone, deleteCustomer } from '../../Controllers/system/customerController.js';
+import { auth } from '../../middleware/authMiddleware.js';
+import { authorizeRoles } from '../../middleware/roleMiddleware.js';
 
 const router = express.Router();
 

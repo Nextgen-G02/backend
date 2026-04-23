@@ -5,9 +5,9 @@ import {
     getProductsByCategory, 
     updateProduct, 
     deleteProduct 
-} from "../Controllers/productController.js";
-import { auth } from "../middleware/authMiddleware.js";
-import { authorizeRoles } from "../middleware/roleMiddleware.js";
+} from "../../Controllers/system/productController.js";
+import { auth } from "../../middleware/authMiddleware.js";
+import { authorizeRoles } from "../../middleware/roleMiddleware.js";
 const productRoutes = express.Router();
 
 productRoutes.post("/add", auth, authorizeRoles("admin", "staff"), addProduct);

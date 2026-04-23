@@ -1,6 +1,6 @@
-import User from "../models/user.js";
+import User from "../../models/user.js";
 import bcrypt from "bcrypt";
-import generateToken from "../utils/generateToken.js";
+import generateToken from "../../utils/generateToken.js";
 
 export const registerUser = async (req, res) => {
     try {

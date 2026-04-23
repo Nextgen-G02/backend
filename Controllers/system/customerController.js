@@ -1,4 +1,4 @@
-import Customer from '../models/customer.model.js';
+import Customer from '../../models/customer.model.js';
 
 export const getCustomers = async (req, res) => {
     try {
@@ -29,3 +29,4 @@ export const deleteCustomer = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+

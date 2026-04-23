@@ -1,8 +1,8 @@
 import express from 'express';
 const router = express.Router();
-import * as orderController from '../Controllers/orderController.js';
-import { auth } from '../middleware/authMiddleware.js';
-import { authorizeRoles } from '../middleware/roleMiddleware.js';
+import * as orderController from '../../Controllers/system/orderController.js';
+import { auth } from '../../middleware/authMiddleware.js';
+import { authorizeRoles } from '../../middleware/roleMiddleware.js';
 
 // Apply auth to all order routes
 router.use(auth);

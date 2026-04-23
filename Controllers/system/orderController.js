@@ -1,7 +1,7 @@
-import Order from '../models/order.model.js';
-import Product from '../models/product.model.js';
-import Inventory from '../models/Inventory.js';
-import Customer from '../models/customer.model.js';
+import Order from '../../models/order.model.js';
+import Product from '../../models/product.model.js';
+import Inventory from '../../models/Inventory.js';
+import Customer from '../../models/customer.model.js';
 
 
 
@@ -231,5 +231,6 @@ export const deleteOrder = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 

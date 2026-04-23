@@ -1,6 +1,6 @@
-import Sale from '../models/Sale.js';
-import Purchase from '../models/Purchase.js';
-import Order from '../models/order.model.js';
+import Sale from '../../models/Sale.js';
+import Purchase from '../../models/Purchase.js';
+import Order from '../../models/order.model.js';
 
 export const getFinancialSummary = async (req, res) => {
     try {
@@ -36,3 +36,4 @@ export const getFinancialSummary = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+

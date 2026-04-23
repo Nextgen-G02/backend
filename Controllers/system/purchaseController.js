@@ -1,4 +1,4 @@
-import Purchase from "../models/Purchase.js";
+import Purchase from "../../models/Purchase.js";
 
 // @desc    Get all purchases for a specific supplier
 // @route   GET /api/purchases/supplier/:supplierId
@@ -53,3 +53,4 @@ export const deletePurchase = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+

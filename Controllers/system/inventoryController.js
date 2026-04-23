@@ -1,5 +1,5 @@
-import Inventory from '../models/Inventory.js';
-import Product from '../models/product.model.js';
+import Inventory from '../../models/Inventory.js';
+import Product from '../../models/product.model.js';
 
 export const getInventory = async (req, res) => {
     try {
@@ -43,3 +43,4 @@ export const syncInventory = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
