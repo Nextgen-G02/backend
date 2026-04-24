@@ -1,5 +1,9 @@
 import express from 'express';
-import { getFinancialSummary } from '../../Controllers/system/financialController.js';
+import { 
+    getFinancialSummary, 
+    getDailyRevenue, 
+    getMonthlyRevenue 
+} from '../../Controllers/system/financialController.js';
 import { auth } from '../../middleware/authMiddleware.js';
 import { authorizeRoles } from '../../middleware/roleMiddleware.js';
 
@@ -11,5 +15,7 @@ router.use(auth);
 router.use(authorizeRoles('admin'));
 
 router.get('/summary', getFinancialSummary);
+router.get('/daily-revenue', getDailyRevenue);
+router.get('/monthly-revenue', getMonthlyRevenue);
 
 export default router;
