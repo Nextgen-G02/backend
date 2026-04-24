@@ -39,7 +39,8 @@ const productSchema = new mongoose.Schema({
 
   costPrice: {
     type: Number,
-    required: true
+    required: true,
+    default: 0
   },
 
   stock: {
@@ -53,7 +54,8 @@ const productSchema = new mongoose.Schema({
 
   unit: {
     type: String,
-    required: true
+    required: true,
+    default: 'pcs'
   },
 
   status: {
