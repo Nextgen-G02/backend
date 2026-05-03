@@ -6,13 +6,20 @@ const supplierSchema = new mongoose.Schema({
     required: [true, "Supplier name is required"],
     trim: true,
   },
+  supplierId: {
+    type: String,
+    unique: true,
+  },
   contactPerson: {
     type: String,
     trim: true,
   },
-  phone: {
+  phone1: {
     type: String,
-    required: [true, "Phone number is required"],
+    trim: true,
+  },
+  phone2: {
+    type: String,
     trim: true,
   },
   email: {
@@ -33,6 +40,10 @@ const supplierSchema = new mongoose.Schema({
     type: String,
     enum: ["Active", "Inactive"],
     default: "Active",
+  },
+  creditBalance: {
+    type: Number,
+    default: 0,
   },
   createdAt: {
     type: Date,

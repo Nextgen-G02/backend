@@ -33,6 +33,16 @@ const purchaseSchema = new mongoose.Schema({
     required: true,
     default: 0
   },
+  appliedCredit: {
+    type: Number,
+    default: 0
+  },
+  paymentHistory: [
+    {
+      amount: Number,
+      date: { type: Date, default: Date.now }
+    }
+  ],
   supplyDate: {
     type: Date,
     default: Date.now

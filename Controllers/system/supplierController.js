@@ -29,7 +29,18 @@ export const getSupplierById = async (req, res) => {
 // @route   POST /api/suppliers
 export const createSupplier = async (req, res) => {
   try {
-    const supplier = await Supplier.create(req.body);
+    // Generate unique supplier ID (e.g., SUP-1001)
+    const lastSupplier = await Supplier.findOne().sort({ createdAt: -1 });
+    let newId = "SUP-1001";
+    if (lastSupplier && lastSupplier.supplierId) {
+      const lastIdNum = parseInt(lastSupplier.supplierId.split('-')[1]);
+      if (!isNaN(lastIdNum)) {
+        newId = `SUP-${lastIdNum + 1}`;
+      }
+    }
+    
+    const supplierData = { ...req.body, supplierId: newId };
+    const supplier = await Supplier.create(supplierData);
     res.status(201).json({ success: true, data: supplier });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
