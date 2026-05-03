@@ -20,6 +20,15 @@ const startServer = async () => {
     try {
         await mongoose.connect(MONGO_URI);
         console.log("Connected to MongoDB");
+
+        // Drop unique index on email for suppliers if it exists
+        try {
+            await mongoose.connection.collection('suppliers').dropIndex('email_1');
+            console.log("Dropped unique email index from suppliers");
+        } catch (err) {
+            // Index likely doesn't exist or already dropped
+        }
+
         app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
         });
