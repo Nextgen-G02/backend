@@ -52,7 +52,6 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: true
         },
-
         img: {
             type: String,
             default: "https://img.icons8.com/?size=100&id=ScJCfhkd77yD&format=png&color=000000"
