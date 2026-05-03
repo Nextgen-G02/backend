@@ -1,30 +1,24 @@
 import Sale from '../../models/Sale.js';
 import Purchase from '../../models/Purchase.js';
 import Order from '../../models/order.model.js';
+import Expense from '../../models/Expense.js';
 
 export const getFinancialSummary = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
         let dateQuery = {};
 
-        if (startDate && endDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            dateQuery = { createdAt: { $gte: start, $lte: end } };
-        }
+        const start = startDate ? new Date(startDate) : new Date(new Date().setHours(0, 0, 0, 0));
+        const end = endDate ? new Date(endDate) : new Date(new Date().setHours(23, 59, 59, 999));
+        
+        if (endDate) end.setHours(23, 59, 59, 999);
 
         // Aggregate Gross Yield (Revenue from Paid Orders)
         const revenueAggregate = await Order.aggregate([
             { 
                 $match: { 
                     paymentStatus: 'Paid',
-                    ...(startDate && endDate ? { 
-                        createdAt: { 
-                            $gte: new Date(startDate), 
-                            $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) 
-                        } 
-                    } : {})
+                    createdAt: { $gte: start, $lte: end }
                 } 
             },
             {
@@ -40,13 +34,10 @@ export const getFinancialSummary = async (req, res) => {
         const orderCount = revenueAggregate.length > 0 ? revenueAggregate[0].count : 0;
 
         // Aggregate Ops Burn (Expenses from Purchases)
-        // Use supplyDate if available, otherwise createdAt
         const purchaseAggregate = await Purchase.aggregate([
             {
                 $match: {
-                    ...(startDate && endDate ? { 
-                        supplyDate: { $gte: new Date(startDate), $lte: new Date(endDate) } 
-                    } : {})
+                    supplyDate: { $gte: start, $lte: end }
                 }
             },
             {
@@ -59,14 +50,47 @@ export const getFinancialSummary = async (req, res) => {
 
         const opsBurn = purchaseAggregate.length > 0 ? purchaseAggregate[0].totalExpenses : 0;
 
+        // Aggregate Manual Expenses (Salaries, Rent, Utilities, etc.)
+        const manualExpensesAggregate = await Expense.aggregate([
+            {
+                $match: {
+                    date: { $gte: start, $lte: end }
+                }
+            },
+            {
+                $group: {
+                    _id: "$category",
+                    total: { $sum: "$amount" }
+                }
+            }
+        ]);
+
+        const expenseBreakdown = {
+            Ingredients: 0,
+            Salaries: 0,
+            Utilities: 0,
+            Rent: 0,
+            Other: 0
+        };
+
+        let totalManualExpenses = 0;
+        manualExpensesAggregate.forEach(item => {
+            expenseBreakdown[item._id] = item.total;
+            totalManualExpenses += item.total;
+        });
+
         // Calculate Net Retained
-        const netRetained = grossYield - opsBurn;
+        const totalExpenses = opsBurn + totalManualExpenses;
+        const netRetained = grossYield - totalExpenses;
 
         res.status(200).json({
             success: true,
             data: {
                 grossYield,
                 opsBurn,
+                totalManualExpenses,
+                expenseBreakdown,
+                totalExpenses,
                 netRetained,
                 orderCount
             }
