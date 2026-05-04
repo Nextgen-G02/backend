@@ -121,40 +121,39 @@ export const closeDrawer = async (req, res) => {
     }
 };
 
-export const updateDrawer = async (req, res) => {
+export const getDrawerHistory = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { openingBalance, actualBalance, notes } = req.body;
-        
-        const drawer = await CashDrawer.findById(id);
-        if (!drawer) {
-            return res.status(404).json({ success: false, message: 'Drawer not found' });
-        }
-
-        if (openingBalance !== undefined) drawer.openingBalance = openingBalance;
-        if (actualBalance !== undefined) {
-            drawer.actualBalance = actualBalance;
-            drawer.difference = actualBalance - drawer.closingBalance;
-        }
-        if (notes !== undefined) drawer.notes = notes;
-
-        // Recalculate closing balance if opening changed
-        drawer.closingBalance = drawer.openingBalance + drawer.salesCash - drawer.expensesCash;
-        if (drawer.status === 'Closed') {
-            drawer.difference = drawer.actualBalance - drawer.closingBalance;
-        }
-
-        await drawer.save();
-        res.status(200).json({ success: true, data: drawer });
+        const history = await CashDrawer.find().sort({ date: -1 }).limit(30);
+        res.status(200).json({ success: true, data: history });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
-export const getDrawerHistory = async (req, res) => {
+export const updateDrawer = async (req, res) => {
     try {
-        const history = await CashDrawer.find().sort({ date: -1 }).limit(30);
-        res.status(200).json({ success: true, data: history });
+        const { id } = req.params;
+        const { actualBalance, notes, openingBalance } = req.body;
+
+        const drawer = await CashDrawer.findById(id);
+        if (!drawer) {
+            return res.status(404).json({ success: false, message: 'Drawer record not found' });
+        }
+
+        if (openingBalance !== undefined) drawer.openingBalance = openingBalance;
+        if (actualBalance !== undefined) {
+            drawer.actualBalance = actualBalance;
+            // Recalculate difference
+            drawer.difference = actualBalance - drawer.closingBalance;
+        }
+        if (notes !== undefined) drawer.notes = notes;
+
+        // Recalculate closing balance if openingBalance was changed
+        drawer.closingBalance = drawer.openingBalance + drawer.salesCash - drawer.expensesCash;
+        drawer.difference = drawer.actualBalance - drawer.closingBalance;
+
+        await drawer.save();
+        res.status(200).json({ success: true, data: drawer });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

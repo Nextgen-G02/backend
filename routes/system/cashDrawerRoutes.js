@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get('/today', getTodayDrawer);
 router.post('/close', closeDrawer);
-router.put('/:id', updateDrawer);
 router.get('/history', getDrawerHistory);
+router.put('/:id', updateDrawer);
 
 export default router;

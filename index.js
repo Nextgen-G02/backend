@@ -11,6 +11,7 @@ import app from './app.js';
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URL;
 
+
 if (!MONGO_URI) {
     console.error("MONGO_URI missing");
     process.exit(1);
