@@ -14,7 +14,9 @@ export const addProduct = async (req, res) => {
             stock,
             expiryDate,
             unit,
-            status
+            status,
+            isIngredient,
+            recipe
          } = req.body;
 
          const existingProduct = await Product.findOne({ productId });
@@ -45,7 +47,9 @@ export const addProduct = async (req, res) => {
                expiryDate,
                unit,
                status,
-               stockStatus
+               stockStatus,
+               isIngredient: isIngredient || false,
+               recipe: recipe || []
     });
 
         await newProduct.save();

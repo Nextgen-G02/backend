@@ -1,5 +1,5 @@
 import express from 'express';
-import { getInventory, updateLowStockThreshold, syncInventory } from '../../Controllers/system/inventoryController.js';
+import { getInventory, updateLowStockThreshold, syncInventory, getInventoryHistory } from '../../Controllers/system/inventoryController.js';
 import { auth } from '../../middleware/authMiddleware.js';
 import { authorizeRoles } from '../../middleware/roleMiddleware.js';
 
@@ -9,6 +9,7 @@ router.use(auth);
 router.use(authorizeRoles('admin', 'staff'));
 
 router.get('/', getInventory);
+router.get('/history', getInventoryHistory);
 router.patch('/:id/threshold', updateLowStockThreshold);
 router.post('/sync', syncInventory);
 

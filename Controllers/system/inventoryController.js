@@ -1,9 +1,10 @@
 import Inventory from '../../models/Inventory.js';
 import Product from '../../models/product.model.js';
+import InventoryHistory from '../../models/InventoryHistory.js';
 
 export const getInventory = async (req, res) => {
     try {
-        const inventory = await Inventory.find().populate('productId', 'pName stockStatus productId images');
+        const inventory = await Inventory.find().populate('productId');
         res.status(200).json({ success: true, data: inventory });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -39,6 +40,28 @@ export const syncInventory = async (req, res) => {
             );
         }
         res.status(200).json({ success: true, message: 'Inventory synced with products' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const getInventoryHistory = async (req, res) => {
+    try {
+        const { productId, type, startDate, endDate } = req.query;
+        let query = {};
+
+        if (productId) query.productId = productId;
+        if (type) query.type = type;
+        if (startDate && endDate) {
+            query.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
+        }
+
+        const history = await InventoryHistory.find(query)
+            .populate('productId', 'pName productId')
+            .sort({ date: -1 })
+            .limit(100);
+
+        res.status(200).json({ success: true, data: history });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
