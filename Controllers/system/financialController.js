@@ -69,7 +69,6 @@ export const getFinancialSummary = async (req, res) => {
             Ingredients: 0,
             Salaries: 0,
             Utilities: 0,
-            Rent: 0,
             Other: 0
         };
 
