@@ -1,6 +1,7 @@
 import Product from '../../models/product.model.js';
 import Inventory from '../../models/Inventory.js';
 import InventoryHistory from '../../models/InventoryHistory.js';
+import Expense from '../../models/Expense.js';
 
 export const addProduct = async (req, res) => {
     try {
@@ -131,6 +132,19 @@ export const updateProduct = async (req, res) => {
                 { quantity: stock, lastUpdated: new Date() },
                 { upsert: true }
             );
+
+            // Automatically log financial loss if expired or damaged
+            if (type === 'OUT' && (reason === 'Expired Cake' || reason === 'Damaged')) {
+                const lossAmount = Math.abs(difference) * (oldProduct.costPrice || 0);
+                if (lossAmount > 0) {
+                    await Expense.create({
+                        category: 'Other',
+                        amount: lossAmount,
+                        description: `Waste Loss: ${oldProduct.pName} (${Math.abs(difference)} units) - ${reason}`,
+                        date: new Date()
+                    });
+                }
+            }
 
             // Update stock status automatically
             let stockStatus = "In Stock";
