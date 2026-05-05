@@ -1,4 +1,6 @@
 import Product from '../../models/product.model.js';
+import Inventory from '../../models/Inventory.js';
+import InventoryHistory from '../../models/InventoryHistory.js';
 
 export const addProduct = async (req, res) => {
     try {
@@ -103,14 +105,46 @@ export const getProductsByCategory = async (req, res) => {
 };
 export const updateProduct = async (req, res) => {
     try {
+        const oldProduct = await Product.findById(req.params.id);
+        if (!oldProduct) {
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
+
+        const { stock, ...otherData } = req.body;
+        
+        // Handle stock changes for history and inventory sync
+        if (stock !== undefined && stock !== oldProduct.stock) {
+            const difference = stock - oldProduct.stock;
+            const type = difference > 0 ? 'IN' : 'OUT';
+            const reason = req.body.updateReason || "Inventory Update";
+
+            await InventoryHistory.create({
+                productId: oldProduct._id,
+                type,
+                quantity: Math.abs(difference),
+                reason,
+                date: new Date()
+            });
+
+            await Inventory.findOneAndUpdate(
+                { productId: oldProduct._id },
+                { quantity: stock, lastUpdated: new Date() },
+                { upsert: true }
+            );
+
+            // Update stock status automatically
+            let stockStatus = "In Stock";
+            if (stock === 0) stockStatus = "Out of Stock";
+            else if (stock < 5) stockStatus = "Low Stock";
+            req.body.stockStatus = stockStatus;
+        }
+
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
             { $set: req.body },
             { new: true }
         );
-        if (!updatedProduct) {
-            return res.status(404).json({ success: false, message: "Product not found" });
-        }
+
         res.status(200).json(updatedProduct);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
