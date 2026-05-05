@@ -119,19 +119,6 @@ export const updateProduct = async (req, res) => {
             const type = difference > 0 ? 'IN' : 'OUT';
             const reason = req.body.updateReason || "Inventory Update";
 
-            // Automated Financial Loss Recording
-            if (difference < 0 && (reason === "Expired Cake" || reason === "Damaged")) {
-                const lossAmount = Math.abs(difference) * (oldProduct.costPrice || 0);
-                if (lossAmount > 0) {
-                    await Expense.create({
-                        category: "Other",
-                        amount: lossAmount,
-                        description: `Inventory Loss: ${oldProduct.pName} (${Math.abs(difference)} units) - Reason: ${reason}`,
-                        date: new Date()
-                    });
-                }
-            }
-
             await InventoryHistory.create({
                 productId: oldProduct._id,
                 type,
@@ -145,6 +132,19 @@ export const updateProduct = async (req, res) => {
                 { quantity: stock, lastUpdated: new Date() },
                 { upsert: true }
             );
+
+            // Automatically log financial loss if expired or damaged
+            if (type === 'OUT' && (reason === 'Expired Cake' || reason === 'Damaged')) {
+                const lossAmount = Math.abs(difference) * (oldProduct.costPrice || 0);
+                if (lossAmount > 0) {
+                    await Expense.create({
+                        category: 'Other',
+                        amount: lossAmount,
+                        description: `Waste Loss: ${oldProduct.pName} (${Math.abs(difference)} units) - ${reason}`,
+                        date: new Date()
+                    });
+                }
+            }
 
             // Update stock status automatically
             let stockStatus = "In Stock";

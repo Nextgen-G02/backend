@@ -4,10 +4,11 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-dotenv.config({ path: './.env' });
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, 'backend', '.env') });
 
-import Product from './models/product.model.js';
-import Expense from './models/Expense.js';
+import Product from './backend/models/product.model.js';
+import Expense from './backend/models/Expense.js';
 
 async function audit() {
     try {
@@ -28,11 +29,11 @@ async function audit() {
 
         if (utilsCount > 0) {
             console.log('Migrating Utilities to Shop Bills...');
-            const res = await Expense.updateMany({ category: 'Utilities' }, { category: 'Shop Bills' });
-            console.log(`Migration complete. Updated ${res.modifiedCount} records.`);
+            await Expense.updateMany({ category: 'Utilities' }, { category: 'Shop Bills' });
+            console.log('Migration complete.');
         }
 
-        const sampleProducts = await Product.find({ costPrice: { $gt: 0 } }).limit(3);
+        const sampleProducts = await Product.find({ costPrice: { $gt: 0 } }).limit(5);
         console.log('Sample products with cost price:', sampleProducts.map(p => ({ name: p.pName, cost: p.costPrice })));
 
         process.exit(0);
