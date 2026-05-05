@@ -103,9 +103,23 @@ export const getProductsByCategory = async (req, res) => {
 };
 export const updateProduct = async (req, res) => {
     try {
+        const updateData = { ...req.body };
+        
+        // Recalculate stockStatus if stock is being updated
+        if (updateData.stock !== undefined) {
+            let stockStatus = "In Stock";
+            const stock = Number(updateData.stock);
+            if (stock === 0) {
+                stockStatus = "Out of Stock";
+            } else if (stock < 5) {
+                stockStatus = "Low Stock";
+            }
+            updateData.stockStatus = stockStatus;
+        }
+
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
-            { $set: req.body },
+            { $set: updateData },
             { new: true }
         );
         if (!updatedProduct) {
