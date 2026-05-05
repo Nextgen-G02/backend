@@ -1,6 +1,7 @@
 import Product from '../../models/product.model.js';
 import Inventory from '../../models/Inventory.js';
 import InventoryHistory from '../../models/InventoryHistory.js';
+import Expense from '../../models/Expense.js';
 
 export const addProduct = async (req, res) => {
     try {
@@ -117,6 +118,19 @@ export const updateProduct = async (req, res) => {
             const difference = stock - oldProduct.stock;
             const type = difference > 0 ? 'IN' : 'OUT';
             const reason = req.body.updateReason || "Inventory Update";
+
+            // Automated Financial Loss Recording
+            if (difference < 0 && (reason === "Expired Cake" || reason === "Damaged")) {
+                const lossAmount = Math.abs(difference) * (oldProduct.costPrice || 0);
+                if (lossAmount > 0) {
+                    await Expense.create({
+                        category: "Other",
+                        amount: lossAmount,
+                        description: `Inventory Loss: ${oldProduct.pName} (${Math.abs(difference)} units) - Reason: ${reason}`,
+                        date: new Date()
+                    });
+                }
+            }
 
             await InventoryHistory.create({
                 productId: oldProduct._id,
