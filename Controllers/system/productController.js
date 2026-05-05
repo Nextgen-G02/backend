@@ -1,18 +1,15 @@
 import Product from '../../models/product.model.js';
-import Inventory from '../../models/Inventory.js';
-import InventoryHistory from '../../models/InventoryHistory.js';
-import Expense from '../../models/Expense.js';
 
 export const addProduct = async (req, res) => {
     try {
-        const { 
-            productId, 
-            pName, 
-            pCategory, 
-            description, 
-            images, 
-            weight, 
-            price, 
+        const {
+            productId,
+            pName,
+            pCategory,
+            description,
+            images,
+            weight,
+            price,
             costPrice,
             stock,
             expiryDate,
@@ -20,52 +17,52 @@ export const addProduct = async (req, res) => {
             status,
             isIngredient,
             recipe
-         } = req.body;
+        } = req.body;
 
-         const existingProduct = await Product.findOne({ productId });
-            if (existingProduct) {
-                return res.status(400).json({ 
-                    success:false,
-                    message: 'Product ID already exists' 
-                });
-            }
+        const existingProduct = await Product.findOne({ productId });
+        if (existingProduct) {
+            return res.status(400).json({
+                success: false,
+                message: 'Product ID already exists'
+            });
+        }
 
-            let stockStatus = "In Stock";
-            if (stock === 0) {
-                stockStatus = "Out of Stock";
-            } else if (stock < 5) {
-                stockStatus = "Low Stock";
-            }
+        let stockStatus = "In Stock";
+        if (stock === 0) {
+            stockStatus = "Out of Stock";
+        } else if (stock < 5) {
+            stockStatus = "Low Stock";
+        }
 
-            const newProduct = new Product({
-               productId,
-               pName,
-               pCategory,
-               description,
-               images,
-               weight,
-               price,
-               costPrice,
-               stock,
-               expiryDate,
-               unit,
-               status,
-               stockStatus,
-               isIngredient: isIngredient || false,
-               recipe: recipe || []
-    });
+        const newProduct = new Product({
+            productId,
+            pName,
+            pCategory,
+            description,
+            images,
+            weight,
+            price,
+            costPrice,
+            stock,
+            expiryDate,
+            unit,
+            status,
+            stockStatus,
+            isIngredient: isIngredient || false,
+            recipe: recipe || []
+        });
 
         await newProduct.save();
 
         res.status(201).json({
-            success:true,
+            success: true,
             message: 'Product added successfully',
             data: newProduct
         });
     }
     catch (error) {
         res.status(500).json({
-            success:false,
+            success: false,
             message: 'Failed to add product',
             error: error.message
         });
@@ -91,10 +88,10 @@ export const getProductsByCategory = async (req, res) => {
     try {
         const { category } = req.params;
         // Improved regex to match singular and plural (e.g., "cake" matches "Cakes")
-        const products = await Product.find({ 
-            pCategory: { $regex: new RegExp(`^${category}s?$`, 'i') } 
+        const products = await Product.find({
+            pCategory: { $regex: new RegExp(`^${category}s?$`, 'i') }
         });
-        
+
         res.status(200).json(products);
     } catch (error) {
         res.status(500).json({
@@ -106,59 +103,28 @@ export const getProductsByCategory = async (req, res) => {
 };
 export const updateProduct = async (req, res) => {
     try {
-        const oldProduct = await Product.findById(req.params.id);
-        if (!oldProduct) {
-            return res.status(404).json({ success: false, message: "Product not found" });
-        }
+        const updateData = { ...req.body };
 
-        const { stock, ...otherData } = req.body;
-        
-        // Handle stock changes for history and inventory sync
-        if (stock !== undefined && stock !== oldProduct.stock) {
-            const difference = stock - oldProduct.stock;
-            const type = difference > 0 ? 'IN' : 'OUT';
-            const reason = req.body.updateReason || "Inventory Update";
-
-            await InventoryHistory.create({
-                productId: oldProduct._id,
-                type,
-                quantity: Math.abs(difference),
-                reason,
-                date: new Date()
-            });
-
-            await Inventory.findOneAndUpdate(
-                { productId: oldProduct._id },
-                { quantity: stock, lastUpdated: new Date() },
-                { upsert: true }
-            );
-
-            // Automatically log financial loss if expired or damaged
-            if (type === 'OUT' && (reason === 'Expired Cake' || reason === 'Damaged')) {
-                const lossAmount = Math.abs(difference) * (oldProduct.costPrice || 0);
-                if (lossAmount > 0) {
-                    await Expense.create({
-                        category: 'Other',
-                        amount: lossAmount,
-                        description: `Waste Loss: ${oldProduct.pName} (${Math.abs(difference)} units) - ${reason}`,
-                        date: new Date()
-                    });
-                }
-            }
-
-            // Update stock status automatically
+        // Recalculate stockStatus if stock is being updated
+        if (updateData.stock !== undefined) {
             let stockStatus = "In Stock";
-            if (stock === 0) stockStatus = "Out of Stock";
-            else if (stock < 5) stockStatus = "Low Stock";
-            req.body.stockStatus = stockStatus;
+            const stock = Number(updateData.stock);
+            if (stock === 0) {
+                stockStatus = "Out of Stock";
+            } else if (stock < 5) {
+                stockStatus = "Low Stock";
+            }
+            updateData.stockStatus = stockStatus;
         }
 
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
-            { $set: req.body },
+            { $set: updateData },
             { new: true }
         );
-
+        if (!updatedProduct) {
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
         res.status(200).json(updatedProduct);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
