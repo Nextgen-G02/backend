@@ -85,6 +85,22 @@ const productSchema = new mongoose.Schema({
       weight: Number,
       priceMultiplier: { type: Number, default: 1 }
     }
+  ],
+  isIngredient: {
+    type: Boolean,
+    default: false
+  },
+  recipe: [
+    {
+      ingredientId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product"
+      },
+      quantity: {
+        type: Number,
+        required: true
+      }
+    }
   ]
 },
 

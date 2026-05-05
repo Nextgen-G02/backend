@@ -13,11 +13,17 @@ import customerRoutes from "./routes/system/customerRoutes.js";
 import financialRoutes from "./routes/system/financialRoutes.js";
 import supplierRoutes from "./routes/system/supplierRoutes.js";
 import purchaseRoutes from "./routes/system/purchaseRoutes.js";
+import expenseRoutes from "./routes/system/expenseRoutes.js";
+import cashDrawerRoutes from "./routes/system/cashDrawerRoutes.js";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.get("/", (req, res) => {
+    res.send("Backend is running");
+});
 
 // API Endpoints
 app.use("/api/auth", userRouter);
@@ -29,6 +35,8 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/financial", financialRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/purchases", purchaseRoutes);
+app.use("/api/expenses", expenseRoutes);
+app.use("/api/cash-drawer", cashDrawerRoutes);
 
 
 export default app;
