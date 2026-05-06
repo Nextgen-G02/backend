@@ -34,18 +34,21 @@ const productSchema = new mongoose.Schema({
 
   price: {
     type: Number,
-    required: true
+    required: true,
+    min: [0.01, 'Price must be greater than 0']
   },
 
   costPrice: {
     type: Number,
     required: true,
+    min: [0.01, 'Cost price must be greater than 0'],
     default: 0
   },
 
   stock: {
     type: Number,
-    required: true
+    required: true,
+    min: [0, 'Stock cannot be negative']
   },
 
   expiryDate: {
