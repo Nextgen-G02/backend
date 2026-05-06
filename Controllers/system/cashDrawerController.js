@@ -10,16 +10,7 @@ export const getTodayDrawer = async (req, res) => {
         let drawer = await CashDrawer.findOne({ date: today });
 
         if (!drawer) {
-            // If no drawer exists for today, try to find the previous day's closing balance
-            const lastDrawer = await CashDrawer.findOne({ status: 'Closed' }).sort({ date: -1 });
-            const openingBalance = lastDrawer ? lastDrawer.actualBalance : 0;
-
-            drawer = new CashDrawer({
-                date: today,
-                openingBalance: openingBalance,
-                status: 'Open'
-            });
-            await drawer.save();
+            return res.status(200).json({ success: true, data: null });
         }
 
         // Calculate current sales and expenses for the day
@@ -55,7 +46,7 @@ export const getTodayDrawer = async (req, res) => {
         drawer.salesCash = salesAggregate.length > 0 ? salesAggregate[0].total : 0;
         drawer.expensesCash = expensesAggregate.length > 0 ? expensesAggregate[0].total : 0;
         drawer.closingBalance = drawer.openingBalance + drawer.salesCash - drawer.expensesCash;
-        
+
         // Don't save yet, just return the calculated view if it's still open
         // If it's closed, we use the saved values.
 
@@ -154,6 +145,30 @@ export const updateDrawer = async (req, res) => {
 
         await drawer.save();
         res.status(200).json({ success: true, data: drawer });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const openDrawer = async (req, res) => {
+    try {
+        const { openingBalance } = req.body;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const existing = await CashDrawer.findOne({ date: today });
+        if (existing) {
+            return res.status(400).json({ success: false, message: 'Drawer already open for today' });
+        }
+
+        const drawer = new CashDrawer({
+            date: today,
+            openingBalance: openingBalance || 0,
+            status: 'Open'
+        });
+
+        await drawer.save();
+        res.status(201).json({ success: true, data: drawer });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
