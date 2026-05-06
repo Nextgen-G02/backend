@@ -56,6 +56,13 @@ export const addProduct = async (req, res) => {
             recipe
         } = req.body;
 
+        if (price <= 0 || costPrice <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Price and Cost Price must be greater than 0'
+            });
+        }
+
         const existingProduct = await Product.findOne({ productId });
         if (existingProduct) {
             return res.status(400).json({
@@ -169,7 +176,14 @@ export const updateProduct = async (req, res) => {
             return res.status(404).json({ success: false, message: "Product not found" });
         }
 
-        const { stock } = req.body;
+        const { stock, price, costPrice } = req.body;
+
+        if ((price !== undefined && price <= 0) || (costPrice !== undefined && costPrice <= 0)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Price and Cost Price must be greater than 0'
+            });
+        }
 
         // Handle stock changes for history and inventory sync
         if (stock !== undefined && stock !== oldProduct.stock) {
