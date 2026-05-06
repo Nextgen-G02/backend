@@ -9,6 +9,7 @@ const orderSchema = new mongoose.Schema({
             pName: { type: String, required: true },
             category: { type: String, required: true },
             quantity: { type: Number, required: true },
+            unit: { type: String, default: 'pcs' },
             price: { type: Number, required: true },
             description: { type: String },
             customization: {
@@ -40,7 +41,8 @@ const orderSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
-    }
+    },
+    imei: { type: String }
 }, { timestamps: true });
 
 orderSchema.index({ customerName: 'text' });

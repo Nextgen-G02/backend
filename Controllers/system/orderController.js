@@ -8,6 +8,87 @@ import InventoryHistory from '../../models/InventoryHistory.js';
 
 
 
+// --- HELPER FUNCTIONS ---
+const processStockDeduction = async (order) => {
+    for (const item of order.items) {
+        const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
+        if (product) {
+            if (product.recipe && product.recipe.length > 0) {
+                for (const ing of product.recipe) {
+                    const ingredient = ing.ingredientId;
+                    const deduction = (ing.quantity || 0) * (item.quantity || 1);
+                    const newStock = (ingredient.stock || 0) - deduction;
+                    const newStatus = newStock <= 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
+                    
+                    await Product.findByIdAndUpdate(ingredient._id, { $set: { stock: newStock, stockStatus: newStatus } });
+                    await Inventory.findOneAndUpdate({ productId: ingredient._id }, { quantity: newStock, lastUpdated: Date.now() }, { upsert: true });
+                    await InventoryHistory.create({
+                        productId: ingredient._id,
+                        type: 'OUT',
+                        quantity: deduction,
+                        reason: `Production Started: ${product.pName} (Order #${order._id})`,
+                        orderId: order._id
+                    });
+                }
+            } else {
+                const deduction = (item.quantity || 1);
+                const newStock = (product.stock || 0) - deduction;
+                const newStatus = newStock <= 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
+                
+                await Product.findByIdAndUpdate(product._id, { $set: { stock: newStock, stockStatus: newStatus } });
+                await Inventory.findOneAndUpdate({ productId: product._id }, { quantity: newStock, lastUpdated: Date.now() }, { upsert: true });
+                await InventoryHistory.create({
+                    productId: product._id,
+                    type: 'OUT',
+                    quantity: deduction,
+                    reason: `Order Processed (#${order._id})`,
+                    orderId: order._id
+                });
+            }
+        }
+    }
+};
+
+const processStockRestoration = async (order, reason) => {
+    for (const item of order.items) {
+        const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
+        if (product) {
+            if (product.recipe && product.recipe.length > 0) {
+                for (const ing of product.recipe) {
+                    const ingredient = ing.ingredientId;
+                    const restoration = (ing.quantity || 0) * (item.quantity || 1);
+                    const newStock = (ingredient.stock || 0) + restoration;
+                    const newStatus = newStock <= 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
+
+                    await Product.findByIdAndUpdate(ingredient._id, { $set: { stock: newStock, stockStatus: newStatus } });
+                    await Inventory.findOneAndUpdate({ productId: ingredient._id }, { quantity: newStock, lastUpdated: Date.now() }, { upsert: true });
+                    await InventoryHistory.create({
+                        productId: ingredient._id,
+                        type: 'IN',
+                        quantity: restoration,
+                        reason: reason || `Order Adjustment (#${order._id})`,
+                        orderId: order._id
+                    });
+                }
+            } else {
+                const restoration = (item.quantity || 1);
+                const newStock = (product.stock || 0) + restoration;
+                const newStatus = newStock <= 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
+
+                await Product.findByIdAndUpdate(product._id, { $set: { stock: newStock, stockStatus: newStatus } });
+                await Inventory.findOneAndUpdate({ productId: product._id }, { quantity: newStock, lastUpdated: Date.now() }, { upsert: true });
+                await InventoryHistory.create({
+                    productId: product._id,
+                    type: 'IN',
+                    quantity: restoration,
+                    reason: reason || `Order Adjustment (#${order._id})`,
+                    orderId: order._id
+                });
+            }
+        }
+    }
+};
+
 // CREATE ORDER
 export const createOrder = async (req, res) => {
     try {
@@ -61,62 +142,9 @@ export const createOrder = async (req, res) => {
             );
         }
 
-        // 4. Process items for inventory and stock reduction
-        for (const item of order.items) {
-            const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
-
-            if (product) {
-                if (product.recipe && product.recipe.length > 0) {
-                    // Deduct ingredients
-                    for (const ing of product.recipe) {
-                        const ingredient = ing.ingredientId;
-                        const deduction = ing.quantity * item.quantity;
-                        
-                        const newStock = ingredient.stock - deduction;
-                        const newStatus = newStock === 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
-
-                        await Product.findByIdAndUpdate(ingredient._id, {
-                            $set: { stock: newStock, stockStatus: newStatus }
-                        });
-
-                        await Inventory.findOneAndUpdate(
-                            { productId: ingredient._id },
-                            { quantity: newStock, lastUpdated: Date.now() },
-                            { upsert: true }
-                        );
-
-                        await InventoryHistory.create({
-                            productId: ingredient._id,
-                            type: 'OUT',
-                            quantity: deduction,
-                            reason: `Sold in ${product.pName} (Order #${order._id})`,
-                            orderId: order._id
-                        });
-                    }
-                } else {
-                    // Deduct direct product
-                    const newStock = product.stock - item.quantity;
-                    const newStatus = newStock === 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
-
-                    await Product.findByIdAndUpdate(product._id, {
-                        $set: { stock: newStock, stockStatus: newStatus }
-                    });
-
-                    await Inventory.findOneAndUpdate(
-                        { productId: product._id },
-                        { quantity: newStock, lastUpdated: Date.now() },
-                        { upsert: true }
-                    );
-
-                    await InventoryHistory.create({
-                        productId: product._id,
-                        type: 'OUT',
-                        quantity: item.quantity,
-                        reason: `Direct Sale (Order #${order._id})`,
-                        orderId: order._id
-                    });
-                }
-            }
+        // 4. Process items for inventory and stock reduction (ONLY for DirectSale)
+        if (order.type === 'DirectSale') {
+            await processStockDeduction(order);
         }
 
         res.status(201).json(order);
@@ -132,7 +160,7 @@ export const createOrder = async (req, res) => {
 // GET ALL ORDERS
 export const getOrders = async (req, res) => {
     try {
-        const { customerName, status, date } = req.query;
+        const { customerName, status, date, type } = req.query;
         let query = {};
 
         if (customerName) {
@@ -145,6 +173,10 @@ export const getOrders = async (req, res) => {
 
         if (date) {
             query.scheduleDate = date;
+        }
+
+        if (type) {
+            query.type = type;
         }
 
         const orders = await Order.find(query).sort({ createdAt: -1 });
@@ -284,96 +316,37 @@ export const updateStatus = async (req, res) => {
             { new: true }
         );
 
-        // --- STOCK LOGIC ---
+        // --- REFINED STOCK LOGIC ---
 
-        // 1. If moving TO 'Cancelled' from any other state -> Restore Stock
-        if (newStatus === 'Cancelled' && oldStatus !== 'Cancelled') {
-            for (const item of order.items) {
-                const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
-                if (product) {
-                    if (product.recipe && product.recipe.length > 0) {
-                        for (const ing of product.recipe) {
-                            const ingredient = ing.ingredientId;
-                            const restoration = ing.quantity * item.quantity;
-                            const newStock = ingredient.stock + restoration;
-                            const newStatusVal = newStock === 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
-
-                            await Product.findByIdAndUpdate(ingredient._id, { $set: { stock: newStock, stockStatus: newStatusVal } });
-                            await Inventory.findOneAndUpdate({ productId: ingredient._id }, { quantity: newStock, lastUpdated: Date.now() }, { upsert: true });
-                            await InventoryHistory.create({
-                                productId: ingredient._id,
-                                type: 'IN',
-                                quantity: restoration,
-                                reason: `Status -> Cancelled (#${order._id})`,
-                                orderId: order._id
-                            });
-                        }
-                    } else {
-                        const newStock = product.stock + item.quantity;
-                        const newStatusVal = newStock === 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
-                        await Product.findByIdAndUpdate(product._id, { $set: { stock: newStock, stockStatus: newStatusVal } });
-                        await Inventory.findOneAndUpdate({ productId: product._id }, { quantity: newStock, lastUpdated: Date.now() }, { upsert: true });
-                        await InventoryHistory.create({
-                            productId: product._id,
-                            type: 'IN',
-                            quantity: item.quantity,
-                            reason: `Status -> Cancelled (#${order._id})`,
-                            orderId: order._id
-                        });
-                    }
-                }
-            }
+        // 1. If moving TO 'Cancelled' from any state EXCEPT 'Pending' -> Restore Stock
+        // (Since Pending orders don't deduct stock anymore)
+        if (newStatus === 'Cancelled' && oldStatus !== 'Cancelled' && oldStatus !== 'Pending') {
+            await processStockRestoration(order, `Status -> Cancelled (#${order._id})`);
         } 
-        // 2. If moving FROM 'Cancelled' to any other state -> Reduce Stock
-        else if (oldStatus === 'Cancelled' && newStatus !== 'Cancelled') {
+        // 2. If moving TO 'Preparing' from 'Pending' or 'Confirmed' -> Deduct Stock
+        else if (newStatus === 'Preparing' && (oldStatus === 'Pending' || oldStatus === 'Confirmed')) {
+            // Validate stock first
             for (const item of order.items) {
                 const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
                 if (product) {
                     if (product.recipe && product.recipe.length > 0) {
-                        // Check ingredient stock
                         for (const ing of product.recipe) {
-                            const needed = ing.quantity * item.quantity;
-                            if (ing.ingredientId.stock < needed) {
+                            if (ing.ingredientId.stock < (ing.quantity * item.quantity)) {
                                 await Order.findByIdAndUpdate(req.params.id, { orderStatus: oldStatus });
                                 throw new Error(`Insufficient stock for ingredient: ${ing.ingredientId.pName}`);
                             }
                         }
-                        // Deduct ingredients
-                        for (const ing of product.recipe) {
-                            const ingredient = ing.ingredientId;
-                            const deduction = ing.quantity * item.quantity;
-                            const newStock = ingredient.stock - deduction;
-                            const newStatusVal = newStock === 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
-
-                            await Product.findByIdAndUpdate(ingredient._id, { $set: { stock: newStock, stockStatus: newStatusVal } });
-                            await Inventory.findOneAndUpdate({ productId: ingredient._id }, { quantity: newStock, lastUpdated: Date.now() }, { upsert: true });
-                            await InventoryHistory.create({
-                                productId: ingredient._id,
-                                type: 'OUT',
-                                quantity: deduction,
-                                reason: `Status Cancelled -> ${newStatus} (#${order._id})`,
-                                orderId: order._id
-                            });
-                        }
-                    } else {
-                        if (product.stock < item.quantity) {
-                            await Order.findByIdAndUpdate(req.params.id, { orderStatus: oldStatus });
-                            throw new Error(`Insufficient stock for ${product.pName}`);
-                        }
-                        const newStock = product.stock - item.quantity;
-                        const newStatusVal = newStock === 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
-                        await Product.findByIdAndUpdate(product._id, { $set: { stock: newStock, stockStatus: newStatusVal } });
-                        await Inventory.findOneAndUpdate({ productId: product._id }, { quantity: newStock, lastUpdated: Date.now() }, { upsert: true });
-                        await InventoryHistory.create({
-                            productId: product._id,
-                            type: 'OUT',
-                            quantity: item.quantity,
-                            reason: `Status Cancelled -> ${newStatus} (#${order._id})`,
-                            orderId: order._id
-                        });
+                    } else if (product.stock < item.quantity) {
+                        await Order.findByIdAndUpdate(req.params.id, { orderStatus: oldStatus });
+                        throw new Error(`Insufficient stock for product: ${product.pName}`);
                     }
                 }
             }
+            await processStockDeduction(order);
+        }
+        // 3. If moving FROM 'Cancelled' to 'Preparing' or 'Delivered' -> Deduct Stock
+        else if (oldStatus === 'Cancelled' && (newStatus === 'Preparing' || newStatus === 'Delivered')) {
+             await processStockDeduction(order);
         }
 
         res.json(order);
