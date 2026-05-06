@@ -19,6 +19,10 @@ const cashDrawerSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    withdrawals: {
+        type: Number,
+        default: 0
+    },
     closingBalance: {
         type: Number,
         default: 0
