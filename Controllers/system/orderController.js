@@ -385,6 +385,26 @@ export const updateStatus = async (req, res) => {
 
 
 
+// UPDATE PAYMENT STATUS
+export const updatePaymentStatus = async (req, res) => {
+    try {
+        const { paymentStatus } = req.body;
+        const order = await Order.findByIdAndUpdate(
+            req.params.id,
+            { paymentStatus },
+            { new: true }
+        );
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        res.json(order);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 // DELETE ORDER
 export const deleteOrder = async (req, res) => {
     try {
