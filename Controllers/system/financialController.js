@@ -6,14 +6,14 @@ import Expense from '../../models/Expense.js';
 export const getFinancialSummary = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
-        let dateQuery = {};
 
-        const start = startDate ? new Date(startDate) : new Date(new Date().setHours(0, 0, 0, 0));
-        const end = endDate ? new Date(endDate) : new Date(new Date().setHours(23, 59, 59, 999));
+        const start = startDate ? new Date(startDate) : new Date();
+        start.setHours(0, 0, 0, 0);
+
+        const end = endDate ? new Date(endDate) : new Date();
+        end.setHours(23, 59, 59, 999);
         
-        if (endDate) end.setHours(23, 59, 59, 999);
-
-        // Aggregate Gross Yield (Revenue from Paid Orders)
+        // 1. Gross Yield (Revenue from Paid Orders)
         const revenueAggregate = await Order.aggregate([
             { 
                 $match: { 
@@ -24,16 +24,13 @@ export const getFinancialSummary = async (req, res) => {
             {
                 $group: {
                     _id: null,
-                    totalRevenue: { $sum: "$totalAmount" },
+                    total: { $sum: "$totalAmount" },
                     count: { $sum: 1 }
                 }
             }
         ]);
 
-        const grossYield = revenueAggregate.length > 0 ? revenueAggregate[0].totalRevenue : 0;
-        const orderCount = revenueAggregate.length > 0 ? revenueAggregate[0].count : 0;
-
-        // Aggregate Ops Burn (Expenses from Purchases)
+        // 2. Operational Burn (Automated Purchase Logs)
         const purchaseAggregate = await Purchase.aggregate([
             {
                 $match: {
@@ -43,14 +40,12 @@ export const getFinancialSummary = async (req, res) => {
             {
                 $group: {
                     _id: null,
-                    totalExpenses: { $sum: "$cost" }
+                    totalCost: { $sum: "$cost" }
                 }
             }
         ]);
 
-        const opsBurn = purchaseAggregate.length > 0 ? purchaseAggregate[0].totalExpenses : 0;
-
-        // Aggregate Manual Expenses (Salaries, Rent, Utilities, etc.)
+        // 3. Manual Expenses (Aggregated from Expense Collection)
         const manualExpensesAggregate = await Expense.aggregate([
             {
                 $match: {
@@ -64,6 +59,11 @@ export const getFinancialSummary = async (req, res) => {
                 }
             }
         ]);
+
+        // Calculations
+        const grossYield = revenueAggregate.length > 0 ? revenueAggregate[0].total : 0;
+        const orderCount = revenueAggregate.length > 0 ? revenueAggregate[0].count : 0;
+        const opsBurn = purchaseAggregate.length > 0 ? purchaseAggregate[0].totalCost : 0;
 
         const expenseBreakdown = {
             Ingredients: 0,

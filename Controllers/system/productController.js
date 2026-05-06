@@ -12,21 +12,26 @@ const logAutomatedPurchase = async (product, quantity, costPrice) => {
 
         let supplier = await Supplier.findOne({ name: "System / Direct" });
         if (!supplier) {
-            supplier = await Supplier.create({
-                name: "System / Direct",
-                supplierId: "SUP-SYSTEM",
-                productsSupplied: "Direct Inventory Entry",
-                status: "Active"
-            });
+            // Attempt to find by supplierId if name changed
+            supplier = await Supplier.findOne({ supplierId: "SUP-SYSTEM" });
+            
+            if (!supplier) {
+                supplier = await Supplier.create({
+                    name: "System / Direct",
+                    supplierId: "SUP-SYSTEM",
+                    productsSupplied: "Direct Inventory Entry",
+                    status: "Active"
+                });
+            }
         }
 
-        const totalCost = quantity * costPrice;
+        const totalCost = Number(quantity) * Number(costPrice);
 
         await Purchase.create({
             supplier: supplier._id,
             productName: product.pName,
-            quantity: quantity,
-            unitPrice: costPrice,
+            quantity: Number(quantity),
+            unitPrice: Number(costPrice),
             cost: totalCost,
             paidAmount: totalCost,
             balance: 0,
@@ -207,11 +212,12 @@ export const updateProduct = async (req, res) => {
 
             // Auto-log Purchase Cost if stock increased
             if (type === 'IN' && difference > 0) {
-                await logAutomatedPurchase(oldProduct, difference, oldProduct.costPrice);
+                const currentCostPrice = costPrice !== undefined ? costPrice : oldProduct.costPrice;
+                await logAutomatedPurchase(oldProduct, difference, currentCostPrice);
             }
 
             // Automatically log financial loss if expired or damaged
-            if (type === 'OUT' && (reason === 'Expired Cake' || reason === 'Damaged')) {
+            if (type === 'OUT' && (reason === 'Expired' || reason === 'Damaged')) {
                 const lossAmount = Math.abs(difference) * (oldProduct.costPrice || 0);
                 if (lossAmount > 0) {
                     await Expense.create({
