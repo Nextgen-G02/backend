@@ -45,7 +45,7 @@ export const getTodayDrawer = async (req, res) => {
 
         drawer.salesCash = salesAggregate.length > 0 ? salesAggregate[0].total : 0;
         drawer.expensesCash = expensesAggregate.length > 0 ? expensesAggregate[0].total : 0;
-        drawer.closingBalance = drawer.openingBalance + drawer.salesCash - drawer.expensesCash;
+        drawer.closingBalance = drawer.openingBalance + drawer.salesCash - drawer.expensesCash - (drawer.withdrawals || 0);
 
         // Don't save yet, just return the calculated view if it's still open
         // If it's closed, we use the saved values.
@@ -99,7 +99,7 @@ export const closeDrawer = async (req, res) => {
 
         drawer.salesCash = salesAggregate.length > 0 ? salesAggregate[0].total : 0;
         drawer.expensesCash = expensesAggregate.length > 0 ? expensesAggregate[0].total : 0;
-        drawer.closingBalance = drawer.openingBalance + drawer.salesCash - drawer.expensesCash;
+        drawer.closingBalance = drawer.openingBalance + drawer.salesCash - drawer.expensesCash - (drawer.withdrawals || 0);
         drawer.actualBalance = actualBalance;
         drawer.difference = actualBalance - drawer.closingBalance;
         drawer.status = 'Closed';
@@ -140,7 +140,7 @@ export const updateDrawer = async (req, res) => {
         if (notes !== undefined) drawer.notes = notes;
 
         // Recalculate closing balance if openingBalance was changed
-        drawer.closingBalance = drawer.openingBalance + drawer.salesCash - drawer.expensesCash;
+        drawer.closingBalance = drawer.openingBalance + drawer.salesCash - drawer.expensesCash - (drawer.withdrawals || 0);
         drawer.difference = drawer.actualBalance - drawer.closingBalance;
 
         await drawer.save();
@@ -169,6 +169,30 @@ export const openDrawer = async (req, res) => {
 
         await drawer.save();
         res.status(201).json({ success: true, data: drawer });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const withdrawFromDrawer = async (req, res) => {
+    try {
+        const { amount, reason } = req.body;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let drawer = await CashDrawer.findOne({ date: today });
+        if (!drawer || drawer.status === 'Closed') {
+            return res.status(400).json({ success: false, message: 'Drawer is not open' });
+        }
+
+        drawer.withdrawals = (drawer.withdrawals || 0) + parseFloat(amount);
+        drawer.notes = (drawer.notes ? drawer.notes + ' | ' : '') + `Withdrawal: Rs.${amount} (${reason || 'No reason'})`;
+        
+        // Recalculate closing balance
+        drawer.closingBalance = drawer.openingBalance + drawer.salesCash - drawer.expensesCash - drawer.withdrawals;
+        
+        await drawer.save();
+        res.status(200).json({ success: true, data: drawer });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
