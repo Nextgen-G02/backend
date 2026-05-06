@@ -2,6 +2,40 @@ import Product from '../../models/product.model.js';
 import Inventory from '../../models/Inventory.js';
 import InventoryHistory from '../../models/InventoryHistory.js';
 import Expense from '../../models/Expense.js';
+import Purchase from '../../models/Purchase.js';
+import Supplier from '../../models/Supplier.js';
+
+// Helper to log automated purchase for financials
+const logAutomatedPurchase = async (product, quantity, costPrice) => {
+    try {
+        if (quantity <= 0 || costPrice <= 0) return;
+
+        let supplier = await Supplier.findOne({ name: "System / Direct" });
+        if (!supplier) {
+            supplier = await Supplier.create({
+                name: "System / Direct",
+                supplierId: "SUP-SYSTEM",
+                productsSupplied: "Direct Inventory Entry",
+                status: "Active"
+            });
+        }
+
+        const totalCost = quantity * costPrice;
+
+        await Purchase.create({
+            supplier: supplier._id,
+            productName: product.pName,
+            quantity: quantity,
+            unitPrice: costPrice,
+            cost: totalCost,
+            paidAmount: totalCost,
+            balance: 0,
+            supplyDate: new Date()
+        });
+    } catch (error) {
+        console.error("Failed to log automated purchase:", error);
+    }
+};
 
 export const addProduct = async (req, res) => {
     try {
@@ -63,6 +97,30 @@ export const addProduct = async (req, res) => {
         });
 
         await newProduct.save();
+
+        // Create Inventory record for the new product
+        await Inventory.create({
+            productId: newProduct._id,
+            quantity: newProduct.stock,
+            lowStockLevel: 5, // Default threshold
+            lastUpdated: new Date()
+        });
+
+        // Log Initial Stock in History
+        if (newProduct.stock > 0) {
+            await InventoryHistory.create({
+                productId: newProduct._id,
+                type: 'IN',
+                quantity: newProduct.stock,
+                reason: 'Initial Product Add',
+                date: new Date()
+            });
+        }
+
+        // Auto-log Purchase Cost for Financials
+        if (newProduct.stock > 0 && newProduct.costPrice > 0) {
+            await logAutomatedPurchase(newProduct, newProduct.stock, newProduct.costPrice);
+        }
 
         res.status(201).json({
             success: true,
@@ -146,6 +204,11 @@ export const updateProduct = async (req, res) => {
                 { quantity: stock, lastUpdated: new Date() },
                 { upsert: true }
             );
+
+            // Auto-log Purchase Cost if stock increased
+            if (type === 'IN' && difference > 0) {
+                await logAutomatedPurchase(oldProduct, difference, oldProduct.costPrice);
+            }
 
             // Automatically log financial loss if expired or damaged
             if (type === 'OUT' && (reason === 'Expired Cake' || reason === 'Damaged')) {
