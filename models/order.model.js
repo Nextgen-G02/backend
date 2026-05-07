@@ -23,14 +23,15 @@ const orderSchema = new mongoose.Schema({
     totalAmount: { type: Number, default: 0 },
     orderStatus: {
         type: String,
-        enum: ['Pending', 'Confirmed', 'Preparing', 'Delivered', 'Cancelled'],
+        enum: ['Pending', 'Confirmed', 'Preparing', 'Ready', 'Delivered', 'Cancelled'],
         default: 'Pending'
     },
     paymentStatus: {
         type: String,
-        enum: ['Paid', 'Unpaid'],
+        enum: ['Paid', 'Unpaid', 'Partially Paid'],
         default: 'Unpaid'
     },
+    advanceAmount: { type: Number, default: 0 },
     scheduleDate: { type: String },
     scheduleTime: { type: String },
     type: {
@@ -54,6 +55,21 @@ orderSchema.pre('save', async function () {
     this.totalAmount = this.items.reduce((total, item) => {
         return total + (item.price * item.quantity);
     }, 0);
+
+    // Automation for DirectSale
+    if (this.type === 'DirectSale') {
+        this.paymentStatus = 'Paid';
+        this.advanceAmount = this.totalAmount;
+    } else {
+        // Automation for Scheduled Orders
+        if (this.advanceAmount >= this.totalAmount && this.totalAmount > 0) {
+            this.paymentStatus = 'Paid';
+        } else if (this.advanceAmount > 0) {
+            this.paymentStatus = 'Partially Paid';
+        } else {
+            this.paymentStatus = 'Unpaid';
+        }
+    }
 });
 
 

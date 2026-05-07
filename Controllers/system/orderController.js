@@ -218,6 +218,14 @@ export const updateOrder = async (req, res) => {
             return res.status(404).json({ message: 'Order not found' });
         }
 
+        // Block transition to Delivered if not paid
+        if (req.body.orderStatus === 'Delivered' && oldOrder.paymentStatus !== 'Paid') {
+            return res.status(400).json({ 
+                message: 'Payment Pending: Full settlement is required before marking this order as Delivered.',
+                requirePayment: true
+            });
+        }
+
         const order = await Order.findByIdAndUpdate(
             req.params.id,
             req.body,
@@ -310,6 +318,14 @@ export const updateStatus = async (req, res) => {
             return res.json(oldOrder);
         }
 
+        // Block transition to Delivered if not paid
+        if (newStatus === 'Delivered' && oldOrder.paymentStatus !== 'Paid') {
+            return res.status(400).json({ 
+                message: 'Payment Pending: Full settlement is required before marking this order as Delivered.',
+                requirePayment: true
+            });
+        }
+
         const order = await Order.findByIdAndUpdate(
             req.params.id,
             { orderStatus: newStatus },
@@ -318,13 +334,12 @@ export const updateStatus = async (req, res) => {
 
         // --- REFINED STOCK LOGIC ---
 
-        // 1. If moving TO 'Cancelled' from any state EXCEPT 'Pending' -> Restore Stock
-        // (Since Pending orders don't deduct stock anymore)
-        if (newStatus === 'Cancelled' && oldStatus !== 'Cancelled' && oldStatus !== 'Pending') {
+        // 1. If moving TO 'Cancelled' from a state where stock was likely deducted (Preparing, Ready, Delivered) -> Restore Stock
+        if (newStatus === 'Cancelled' && (oldStatus === 'Preparing' || oldStatus === 'Ready' || oldStatus === 'Delivered')) {
             await processStockRestoration(order, `Status -> Cancelled (#${order._id})`);
         } 
-        // 2. If moving TO 'Preparing' from 'Pending' or 'Confirmed' -> Deduct Stock
-        else if (newStatus === 'Preparing' && (oldStatus === 'Pending' || oldStatus === 'Confirmed')) {
+        // 2. If moving TO a processed state (Preparing, Ready, Delivered) from a non-deducted state (Pending, Confirmed) -> Deduct Stock
+        else if (['Preparing', 'Ready', 'Delivered'].includes(newStatus) && (oldStatus === 'Pending' || oldStatus === 'Confirmed')) {
             // Validate stock first
             for (const item of order.items) {
                 const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
@@ -344,8 +359,8 @@ export const updateStatus = async (req, res) => {
             }
             await processStockDeduction(order);
         }
-        // 3. If moving FROM 'Cancelled' to 'Preparing' or 'Delivered' -> Deduct Stock
-        else if (oldStatus === 'Cancelled' && (newStatus === 'Preparing' || newStatus === 'Delivered')) {
+        // 3. If moving FROM 'Cancelled' back to active -> Deduct Stock
+        else if (oldStatus === 'Cancelled' && ['Preparing', 'Ready', 'Delivered'].includes(newStatus)) {
              await processStockDeduction(order);
         }
 
