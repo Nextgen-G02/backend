@@ -12,6 +12,7 @@ router.get('/', orderController.getOrders);
 router.get('/:id', orderController.getOrderById);
 router.put('/:id', orderController.updateOrder);
 router.patch('/:id/status', orderController.updateStatus);
+router.patch('/:id/payment', orderController.updatePaymentStatus);
 
 // Restricted to Admin only
 router.delete('/:id', authorizeRoles('admin'), orderController.deleteOrder);
