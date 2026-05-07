@@ -143,7 +143,11 @@ export const addProduct = async (req, res) => {
 };
 export const getProducts = async (req, res) => {
     try {
-        const products = await Product.find({});
+        // Optimization: Exclude heavy recipe and description data for faster POS rendering
+        const products = await Product.find({})
+            .select('-recipe -description')
+            .lean();
+            
         res.status(200).json({
             success: true,
             data: products

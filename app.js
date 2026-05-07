@@ -39,5 +39,15 @@ app.use("/api/purchases", purchaseRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/cash-drawer", cashDrawerRoutes);
 
+// Deep Diagnostic Middleware
+app.use((err, req, res, next) => {
+    console.error("Critical System Error:", err.stack);
+    res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+        error: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+});
 
 export default app;
