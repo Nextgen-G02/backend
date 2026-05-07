@@ -195,8 +195,9 @@ export const updateProduct = async (req, res) => {
         }
 
         // Handle stock changes for history and inventory sync
-        if (stock !== undefined && stock !== oldProduct.stock) {
-            const difference = stock - oldProduct.stock;
+        const newStock = Number(stock);
+        if (stock !== undefined && newStock !== oldProduct.stock) {
+            const difference = newStock - oldProduct.stock;
             const type = difference > 0 ? 'IN' : 'OUT';
             const reason = req.body.updateReason || "Inventory Update";
 
@@ -210,7 +211,7 @@ export const updateProduct = async (req, res) => {
 
             await Inventory.findOneAndUpdate(
                 { productId: oldProduct._id },
-                { quantity: stock, lastUpdated: new Date() },
+                { quantity: newStock, lastUpdated: new Date() },
                 { upsert: true }
             );
 
@@ -235,10 +236,14 @@ export const updateProduct = async (req, res) => {
 
             // Update stock status automatically
             let stockStatus = "In Stock";
-            if (stock === 0) stockStatus = "Out of Stock";
-            else if (stock < 5) stockStatus = "Low Stock";
+            if (newStock === 0) stockStatus = "Out of Stock";
+            else if (newStock < 5) stockStatus = "Low Stock";
             req.body.stockStatus = stockStatus;
+            req.body.stock = newStock;
         }
+
+        if (price !== undefined) req.body.price = Number(price);
+        if (costPrice !== undefined) req.body.costPrice = Number(costPrice);
 
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
