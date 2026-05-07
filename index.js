@@ -1,5 +1,5 @@
 import dns from 'dns';
-dns.setServers(['8.8.8.8', '8.8.4.4']); // dont remove this
+dns.setServers(['8.8.8.8', '8.8.4.4']); // Activated to prevent resolution hangs on local networks
 
 
 import dotenv from 'dotenv';
