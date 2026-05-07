@@ -16,6 +16,7 @@ const supplierSchema = new mongoose.Schema({
   },
   phone1: {
     type: String,
+    required: [true, "Primary contact number is required"],
     trim: true,
   },
   phone2: {
