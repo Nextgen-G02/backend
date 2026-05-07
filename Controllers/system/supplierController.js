@@ -4,7 +4,12 @@ import Supplier from "../../models/Supplier.js";
 // @route   GET /api/suppliers
 export const getSuppliers = async (req, res) => {
   try {
-    const suppliers = await Supplier.find().sort({ createdAt: -1 });
+    const suppliers = await Supplier.find({
+      $and: [
+        { name: { $ne: "System / Direct" } },
+        { supplierId: { $ne: "SUP-SYSTEM" } }
+      ]
+    }).sort({ createdAt: -1 });
     res.status(200).json({ success: true, data: suppliers });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -30,14 +35,19 @@ export const getSupplierById = async (req, res) => {
 export const createSupplier = async (req, res) => {
   try {
     // Generate unique supplier ID (e.g., SUP-1001)
-    const lastSupplier = await Supplier.findOne().sort({ createdAt: -1 });
-    let newId = "SUP-1001";
-    if (lastSupplier && lastSupplier.supplierId) {
-      const lastIdNum = parseInt(lastSupplier.supplierId.split('-')[1]);
-      if (!isNaN(lastIdNum)) {
-        newId = `SUP-${lastIdNum + 1}`;
+    const allSuppliers = await Supplier.find({}, { supplierId: 1 });
+    let maxId = 1000;
+    
+    allSuppliers.forEach(s => {
+      if (s.supplierId && s.supplierId.startsWith("SUP-")) {
+        const num = parseInt(s.supplierId.split('-')[1]);
+        if (!isNaN(num) && num > maxId) {
+          maxId = num;
+        }
       }
-    }
+    });
+
+    const newId = `SUP-${maxId + 1}`;
     
     const supplierData = { ...req.body, supplierId: newId };
     const supplier = await Supplier.create(supplierData);
