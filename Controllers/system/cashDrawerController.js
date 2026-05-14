@@ -9,7 +9,7 @@ const syncDrawerData = async (drawer) => {
     endOfDay.setHours(23, 59, 59, 999);
     //calculates the date range
 
-    //give the database total amount of the cash paid in orders model one day
+    //give the revenue record in the specified one day
     const salesAggregate = await Order.aggregate([
         {
             $match: {
@@ -64,8 +64,6 @@ export const getTodayDrawer = async (req, res) => {
         }
 
         await syncDrawerData(drawer);
-        // We don't necessarily need to save on every GET, 
-        // but it helps keep history in sync if we do.
         await drawer.save();
 
         res.status(200).json({ success: true, data: drawer });
