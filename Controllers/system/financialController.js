@@ -68,7 +68,8 @@ export const getFinancialSummary = async (req, res) => {
         const expenseBreakdown = {
             Ingredients: 0,
             Salaries: 0,
-            'Shop Bills': 0,
+            'Current Bill': 0,
+            'Water Bill': 0,
             Other: 0
         };
 
@@ -77,6 +78,9 @@ export const getFinancialSummary = async (req, res) => {
             expenseBreakdown[item._id] = item.total;
             totalManualExpenses += item.total;
         });
+
+        // Add automated purchases to Ingredients category in breakdown
+        expenseBreakdown['Ingredients'] = (expenseBreakdown['Ingredients'] || 0) + opsBurn;
 
         // Calculate Net Retained
         const totalExpenses = opsBurn + totalManualExpenses;

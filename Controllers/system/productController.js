@@ -19,6 +19,7 @@ const logAutomatedPurchase = async (product, quantity, costPrice) => {
                 supplier = await Supplier.create({
                     name: "System / Direct",
                     supplierId: "SUP-SYSTEM",
+                    phone1: "0000000000",
                     productsSupplied: "Direct Inventory Entry",
                     status: "Active"
                 });
@@ -145,7 +146,7 @@ export const getProducts = async (req, res) => {
     try {
         // Optimization: Exclude heavy recipe and description data for faster POS rendering
         const products = await Product.find({})
-            .select('-recipe -description')
+            .select('-recipe')
             .lean();
             
         res.status(200).json({
