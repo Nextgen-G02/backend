@@ -80,7 +80,8 @@ export const getFinancialSummary = async (req, res) => {
         });
 
         
-        expenseBreakdown['Ingredients'] = (expenseBreakdown['Ingredients'] || 0) + opsBurn;
+       /* expenseBreakdown['Ingredients'] = (expenseBreakdown['Ingredients'] || 0) + opsBurn;
+       */
         // Calculate Net Retained
         const totalExpenses = opsBurn + totalManualExpenses;
         const netRetained = grossYield - totalExpenses;
