@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: true,
             minlength: 6,
-            select: false //  not return password by default when querying user
+            select: false //  not return password by default when querying user and
         },
 
         role: {

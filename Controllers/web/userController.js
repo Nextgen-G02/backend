@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import generateToken from "../../utils/generateToken.js";
 import { OAuth2Client } from 'google-auth-library';
 
+// Create Google OAuth client using client ID from environment variables
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const registerUser = async (req, res) => {

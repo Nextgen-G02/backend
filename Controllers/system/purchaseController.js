@@ -18,6 +18,7 @@ export const getSupplierPurchases = async (req, res) => {
 // @access  Private/Admin
 export const createPurchase = async (req, res) => {
   try {
+    // Get purchase data from frontend request
     const { supplier: supplierId, productName, quantity, unitPrice, cost, paidAmount, supplyDate } = req.body;
     
     const supplier = await Supplier.findById(supplierId);
@@ -25,8 +26,11 @@ export const createPurchase = async (req, res) => {
       return res.status(404).json({ success: false, message: "Supplier not found" });
     }
 
+    // Convert total cost to number
     let remainingCost = parseFloat(cost);
+    // Store how much credit was used
     let appliedCredit = 0;
+
 
     // Apply existing credit balance from previous overpayments
     if (supplier.creditBalance > 0) {
@@ -35,9 +39,13 @@ export const createPurchase = async (req, res) => {
       supplier.creditBalance -= appliedCredit;
     }
 
+
+    // Convert paid amount to number
+    // If empty use 0
     let actualPaid = parseFloat(paidAmount) || 0;
     let balance = 0;
 
+    // If customer paid more than remaining cost
     if (actualPaid > remainingCost) {
       // Overpayment: add excess to credit balance
       const excess = actualPaid - remainingCost;
@@ -79,6 +87,7 @@ export const updatePurchase = async (req, res) => {
       return res.status(404).json({ success: false, message: "Record not found" });
     }
 
+    // Find supplier related to purchase
     const supplier = await Supplier.findById(purchase.supplier);
     if (!supplier) {
       return res.status(404).json({ success: false, message: "Supplier not found" });
@@ -143,10 +152,12 @@ export const deletePurchase = async (req, res) => {
 
     const supplier = await Supplier.findById(purchase.supplier);
     if (supplier) {
-        // Revert credit effects
+        // Restore the credits
         supplier.creditBalance += (purchase.appliedCredit || 0);
         
+        //requre cost to pay without remaining cost
         const remainingCostAtTime = purchase.cost - (purchase.appliedCredit || 0);
+         // Check if overpayment existed and calculate excess
         if (purchase.paidAmount > remainingCostAtTime) {
             const excess = purchase.paidAmount - remainingCostAtTime;
             supplier.creditBalance -= excess;
