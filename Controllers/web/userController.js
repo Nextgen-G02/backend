@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import generateToken from "../../utils/generateToken.js";
 import { OAuth2Client } from 'google-auth-library';
 
+// Create Google OAuth client using client ID from environment variables
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const registerUser = async (req, res) => {
@@ -175,7 +176,9 @@ export const deleteUser = async (req, res) => {
 // UPDATE USER
 export const updateUser = async (req, res) => {
     try {
+        // Extract updated fields from request body
         const { firstName, lastName, email, role, password } = req.body;
+        // Store updated fields inside object
         const updateData = { firstName, lastName, email, role };
 
         if (password) {
@@ -190,8 +193,8 @@ export const updateUser = async (req, res) => {
         const updatedUser = await User.findByIdAndUpdate(
             req.params.id,
             updateData,
-            { new: true }
-        ).select('-password');
+            { new: true }  // Return updated document
+        ).select('-password');  // Hide password field
 
         res.status(200).json({ success: true, data: updatedUser, message: 'User updated successfully' });
     } catch (error) {
@@ -208,11 +211,13 @@ export const googleLogin = async (req, res) => {
       });
     }
 
+    // Verify token using Google API
     const ticket = await client.verifyIdToken({
       idToken: tokenId,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 
+    // Get user data from Google payload
     const { email, given_name, family_name, picture, sub: googleId } = ticket.getPayload();
 
     let user = await User.findOne({ email });
