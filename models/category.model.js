@@ -14,6 +14,12 @@ const categorySchema = new mongoose.Schema({
         uppercase: true,
         trim: true
     },
+
+    //   df: {
+    //     type: Number,
+    //     unique: true
+    // },
+
     description: {
         type: String,
         trim: true

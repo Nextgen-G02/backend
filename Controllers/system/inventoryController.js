@@ -28,7 +28,7 @@ export const updateLowStockThreshold = async (req, res) => {
     }
 };
 
-// Sync inventory with product stock (helper or route)
+// Sync inventory update with product stock(same data values)
 export const syncInventory = async (req, res) => {
     try {
         const products = await Product.find();
@@ -44,7 +44,7 @@ export const syncInventory = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-
+//given the last 100 changing history of the inventory
 export const getInventoryHistory = async (req, res) => {
     try {
         const { productId, type, startDate, endDate } = req.query;

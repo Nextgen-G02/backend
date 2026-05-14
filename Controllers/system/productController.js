@@ -51,7 +51,7 @@ export const addProduct = async (req, res) => {
             pCategory,
             description,
             images,
-            weight,
+            // weight,
             price,
             costPrice,
             stock,
@@ -63,18 +63,12 @@ export const addProduct = async (req, res) => {
         } = req.body;
 
         if (price <= 0 || costPrice <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Price and Cost Price must be greater than 0'
-            });
+            return res.status(400).json({success: false,message: 'Price and Cost Price must be greater than 0'});
         }
 
         const existingProduct = await Product.findOne({ productId });
         if (existingProduct) {
-            return res.status(400).json({
-                success: false,
-                message: 'Product ID already exists'
-            });
+            return res.status(400).json({success: false,message: 'Product ID already exists'});
         }
 
         let stockStatus = "In Stock";
@@ -90,7 +84,7 @@ export const addProduct = async (req, res) => {
             pCategory,
             description,
             images,
-            weight,
+            // weight,
             price,
             costPrice,
             stock,
@@ -108,11 +102,11 @@ export const addProduct = async (req, res) => {
         await Inventory.create({
             productId: newProduct._id,
             quantity: newProduct.stock,
-            lowStockLevel: 5, // Default threshold
+            lowStockLevel: 5, // Default set the low level to 5 
             lastUpdated: new Date()
         });
 
-        // Log Initial Stock in History
+        // only run this if stock exists
         if (newProduct.stock > 0) {
             await InventoryHistory.create({
                 productId: newProduct._id,
@@ -127,21 +121,13 @@ export const addProduct = async (req, res) => {
         if (newProduct.stock > 0 && newProduct.costPrice > 0) {
             await logAutomatedPurchase(newProduct, newProduct.stock, newProduct.costPrice);
         }
-
-        res.status(201).json({
-            success: true,
-            message: 'Product added successfully',
-            data: newProduct
-        });
+        res.status(201).json({success: true,message: 'Product added successfully',data: newProduct});
     }
     catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to add product',
-            error: error.message
-        });
+        res.status(500).json({success: false,message: 'Failed to add product',error: error.message});
     }
 };
+
 export const getProducts = async (req, res) => {
     try {
         // Optimization: Exclude heavy recipe and description data for faster POS rendering
@@ -189,15 +175,10 @@ export const updateProduct = async (req, res) => {
         const { stock, price, costPrice } = req.body;
 
         if ((price !== undefined && price <= 0) || (costPrice !== undefined && costPrice <= 0)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Price and Cost Price must be greater than 0'
-            });
+            return res.status(400).json({success: false,message: 'Price and Cost Price must be greater than 0'});
         }
-
-        // Handle stock changes for history and inventory sync
-        const newStock = Number(stock);
-        if (stock !== undefined && newStock !== oldProduct.stock) {
+        const newStock = Number(stock); // stock count
+        if (stock !== undefined && newStock !== oldProduct.stock) {   // this is run only stock is changed
             const difference = newStock - oldProduct.stock;
             const type = difference > 0 ? 'IN' : 'OUT';
             const reason = req.body.updateReason || "Inventory Update";
@@ -213,10 +194,10 @@ export const updateProduct = async (req, res) => {
             await Inventory.findOneAndUpdate(
                 { productId: oldProduct._id },
                 { quantity: newStock, lastUpdated: new Date() },
-                { upsert: true }
+                { upsert: true }  // if not fount create new record
             );
 
-            // Auto-log Purchase Cost if stock increased
+    
             if (type === 'IN' && difference > 0) {
                 const currentCostPrice = costPrice !== undefined ? costPrice : oldProduct.costPrice;
                 await logAutomatedPurchase(oldProduct, difference, currentCostPrice);
@@ -235,7 +216,7 @@ export const updateProduct = async (req, res) => {
                 }
             }
 
-            // Update stock status automatically
+            //Update the Stock Availability status
             let stockStatus = "In Stock";
             if (newStock === 0) stockStatus = "Out of Stock";
             else if (newStock < 5) stockStatus = "Low Stock";
@@ -255,7 +236,6 @@ export const updateProduct = async (req, res) => {
         if (!updatedProduct) {
             return res.status(404).json({ success: false, message: "Product not found" });
         }
-
         res.status(200).json(updatedProduct);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

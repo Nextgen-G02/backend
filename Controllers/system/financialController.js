@@ -30,7 +30,7 @@ export const getFinancialSummary = async (req, res) => {
             }
         ]);
 
-        // 2. Operational Burn (Automated Purchase Logs)
+        // 2. Purchase cost (Operational Burn from Purchases)
         const purchaseAggregate = await Purchase.aggregate([
             {
                 $match: {
@@ -79,9 +79,9 @@ export const getFinancialSummary = async (req, res) => {
             totalManualExpenses += item.total;
         });
 
-        // Add automated purchases to Ingredients category in breakdown
-        expenseBreakdown['Ingredients'] = (expenseBreakdown['Ingredients'] || 0) + opsBurn;
-
+        
+       /* expenseBreakdown['Ingredients'] = (expenseBreakdown['Ingredients'] || 0) + opsBurn;
+       */
         // Calculate Net Retained
         const totalExpenses = opsBurn + totalManualExpenses;
         const netRetained = grossYield - totalExpenses;
