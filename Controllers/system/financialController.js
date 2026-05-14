@@ -79,6 +79,9 @@ export const getFinancialSummary = async (req, res) => {
             totalManualExpenses += item.total;
         });
 
+        // Add automated purchases to Ingredients category in breakdown
+        expenseBreakdown['Ingredients'] = (expenseBreakdown['Ingredients'] || 0) + opsBurn;
+
         // Calculate Net Retained
         const totalExpenses = opsBurn + totalManualExpenses;
         const netRetained = grossYield - totalExpenses;

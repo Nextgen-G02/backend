@@ -19,6 +19,7 @@ const logAutomatedPurchase = async (product, quantity, costPrice) => {
                 supplier = await Supplier.create({
                     name: "System / Direct",
                     supplierId: "SUP-SYSTEM",
+                    phone1: "0000000000",
                     productsSupplied: "Direct Inventory Entry",
                     status: "Active"
                 });

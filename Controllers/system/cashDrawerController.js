@@ -7,7 +7,9 @@ const syncDrawerData = async (drawer) => {
     date.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
+    //calculates the date range
 
+    //give the database total amount of the cash paid in orders model one day
     const salesAggregate = await Order.aggregate([
         {
             $match: {
@@ -23,6 +25,7 @@ const syncDrawerData = async (drawer) => {
         }
     ]);
 
+    //give the expenses record in the specified one day
     const expensesAggregate = await Expense.aggregate([
         {
             $match: {
@@ -40,7 +43,7 @@ const syncDrawerData = async (drawer) => {
     drawer.salesCash = salesAggregate.length > 0 ? salesAggregate[0].total : 0;
     drawer.expensesCash = expensesAggregate.length > 0 ? expensesAggregate[0].total : 0;
     drawer.closingBalance = drawer.openingBalance + drawer.salesCash - drawer.expensesCash - (drawer.withdrawals || 0);
-    
+
     if (drawer.status === 'Closed') {
         drawer.difference = (drawer.actualBalance || 0) - drawer.closingBalance;
     }
@@ -48,6 +51,7 @@ const syncDrawerData = async (drawer) => {
     return drawer;
 };
 
+//get the cash drower data for today
 export const getTodayDrawer = async (req, res) => {
     try {
         const today = new Date();
@@ -87,21 +91,36 @@ export const closeDrawer = async (req, res) => {
 
         await syncDrawerData(drawer);
         await drawer.save();
-        
+
         res.status(200).json({ success: true, data: drawer });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
+//show the history
 export const getDrawerHistory = async (req, res) => {
     try {
         const history = await CashDrawer.find().sort({ date: -1 }).limit(30);
-        
+
         // Sync open drawers in history to show live data
         const syncedHistory = await Promise.all(history.map(async (item) => {
+            const drawerDate = new Date(item.date);
+            drawerDate.setHours(0, 0, 0, 0);
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
             if (item.status === 'Open') {
-                return await syncDrawerData(item);
+                await syncDrawerData(item);
+                
+                // Auto-close if it's from a past date
+                if (drawerDate < today) {
+                    item.status = 'Closed';
+                    item.actualBalance = item.closingBalance; // Set actual to expected to close it cleanly
+                    await item.save();
+                }
+                return item;
             }
             return item;
         }));
@@ -171,7 +190,7 @@ export const withdrawFromDrawer = async (req, res) => {
 
         drawer.withdrawals = (drawer.withdrawals || 0) + parseFloat(amount);
         drawer.notes = (drawer.notes ? drawer.notes + ' | ' : '') + `Withdrawal: Rs.${amount} (${reason || 'No reason'})`;
-        
+
         await syncDrawerData(drawer);
         await drawer.save();
         res.status(200).json({ success: true, data: drawer });
