@@ -30,7 +30,7 @@ export const getFinancialSummary = async (req, res) => {
             }
         ]);
 
-        // 2. Operational Burn (Automated Purchase Logs)
+        // 2. Purchase cost (Operational Burn from Purchases)
         const purchaseAggregate = await Purchase.aggregate([
             {
                 $match: {
