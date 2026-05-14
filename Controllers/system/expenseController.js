@@ -8,7 +8,7 @@ export const createExpense = async (req, res) => {
             amount,
             description,
             date: date || new Date(),
-            createdBy: req.user?._id // Assuming auth middleware provides req.user
+            createdBy: req.user?._id 
         });
         await newExpense.save();
         res.status(201).json({ success: true, data: newExpense });
@@ -65,7 +65,7 @@ export const deleteExpense = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-
+//now not use, using to future add the bar chart or pie chart 
 export const getExpenseStats = async (req, res) => {
     try {
         const stats = await Expense.aggregate([
