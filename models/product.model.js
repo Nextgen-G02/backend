@@ -44,6 +44,10 @@ const productSchema = new mongoose.Schema({
     min: [0.01, 'Cost price must be greater than 0'],
     default: 0
   },
+  discountPercentage: {
+    type: Number,
+    default: 0
+  },
 
   stock: {
     type: Number,
