@@ -55,6 +55,14 @@ const userSchema = new mongoose.Schema(
         img: {
             type: String,
             default: "https://img.icons8.com/?size=100&id=ScJCfhkd77yD&format=png&color=000000"
+        },
+        nic: {
+            type: String,
+            trim: true
+        },
+        address: {
+            type: String,
+            trim: true
         }
     }
 );

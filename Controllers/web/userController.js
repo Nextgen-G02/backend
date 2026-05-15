@@ -57,15 +57,20 @@ export const registerUser = async (req, res) => {
 
 export const loginUser = async (req, res) => {
     try {
-        const {email, password} = req.body;
+        const {email: identifier, password} = req.body;
 
-        if (!email || !password) {
+        if (!identifier || !password) {
             return res.status(400).json({
-                message: "Email and password are required"
+                message: "Email/NIC and password are required"
             });
         }
 
-        const user = await User.findOne({email}).select("+password");
+        const user = await User.findOne({
+            $or: [
+                { email: identifier },
+                { nic: identifier }
+            ]
+        }).select("+password");
 
         if(!user || user.isBlocked || !user.isActive){
             return res.status(401).json({
@@ -104,11 +109,11 @@ export const loginUser = async (req, res) => {
 
 export const createStaff = async (req, res) => {
   try {
-    const { firstName, lastName, email, password } = req.body;
+    const { firstName, lastName, email, password, nic, address } = req.body;
 
-    if (!firstName || !lastName || !email || !password) {
+    if (!firstName || !lastName || !email || !password || !nic || !address) {
       return res.status(400).json({
-        message: "All fields are required"
+        message: "All fields are required including NIC and Address"
       });
     }
 
@@ -127,7 +132,9 @@ export const createStaff = async (req, res) => {
       lastName,
       email,
       password: hashedPassword,
-      role: "staff"
+      role: "staff",
+      nic,
+      address
     });
 
     res.status(201).json({
@@ -177,9 +184,9 @@ export const deleteUser = async (req, res) => {
 export const updateUser = async (req, res) => {
     try {
         // Extract updated fields from request body
-        const { firstName, lastName, email, role, password } = req.body;
+        const { firstName, lastName, email, role, password, nic, address } = req.body;
         // Store updated fields inside object
-        const updateData = { firstName, lastName, email, role };
+        const updateData = { firstName, lastName, email, role, nic, address };
 
         if (password) {
             updateData.password = await bcrypt.hash(password, 10);
