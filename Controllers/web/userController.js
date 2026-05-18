@@ -2,6 +2,7 @@ import User from "../../models/user.js";
 import bcrypt from "bcrypt";
 import generateToken from "../../utils/generateToken.js";
 import { OAuth2Client } from 'google-auth-library';
+import sendEmail from "../../utils/sendEmail.js";
 
 // Create Google OAuth client using client ID from environment variables
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -25,26 +26,43 @@ export const registerUser = async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Generate 6 digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashedOtp = await bcrypt.hash(otp, 10);
 
         const user = await User.create({
             firstName,
             lastName,
             email,
-            password: hashedPassword
+            password: hashedPassword,
+            isVerified: false,
+            otp: hashedOtp,
+            otpExpires: Date.now() + 10 * 60 * 1000 // 10 minutes
         });
 
-        const token = generateToken(user);
+        // Send OTP email
+        const message = `
+            <h1>Welcome to Nirosha Sweet House!</h1>
+            <p>Your OTP for account verification is: <strong>${otp}</strong></p>
+            <p>This OTP is valid for 10 minutes.</p>
+        `;
+
+        try {
+            await sendEmail({
+                email: user.email,
+                subject: "Account Verification - Nirosha Sweet House",
+                html: message
+            });
+        } catch (error) {
+            // Delete user if email fails to send
+            await User.findByIdAndDelete(user._id);
+            return res.status(500).json({ message: "Could not send verification email. Please try again later." });
+        }
 
         res.status(201).json({
-            message: "User registered successfully",
-            token,
-            user: {
-                id: user._id,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                role: user.role
-            }
+            message: "Registration successful. Please check your email for the OTP to verify your account.",
+            email: user.email
         });
     } catch (error){
         console.error(error);
@@ -84,6 +102,17 @@ export const loginUser = async (req, res) => {
             return res.status(401).json({
                 message: "Invalid credentials"
             });
+        }
+
+        if (!user.isVerified) {
+            // Check if user is staff or admin, they might not need verification or we should verify them manually
+            if (user.role === 'customer') {
+                return res.status(403).json({
+                    message: "Please verify your email before logging in.",
+                    notVerified: true,
+                    email: user.email
+                });
+            }
         }
 
         const token = generateToken(user);
@@ -264,4 +293,189 @@ export const googleLogin = async (req, res) => {
     });
   }
 };
+
+export const verifyOTP = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            return res.status(400).json({ message: "Email and OTP are required" });
+        }
+
+        const user = await User.findOne({ email }).select("+otp +otpExpires");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (user.isVerified) {
+            return res.status(400).json({ message: "Account is already verified" });
+        }
+
+        if (!user.otp || !user.otpExpires) {
+            return res.status(400).json({ message: "Invalid OTP request" });
+        }
+
+        if (user.otpExpires < Date.now()) {
+            return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+        }
+
+        const isMatch = await bcrypt.compare(otp, user.otp);
+
+        if (!isMatch) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+
+        // Mark as verified and clear OTP fields
+        user.isVerified = true;
+        user.otp = undefined;
+        user.otpExpires = undefined;
+        await user.save();
+
+        const token = generateToken(user);
+
+        res.status(200).json({
+            message: "Account verified successfully",
+            token,
+            user: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error("Verify OTP Error:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+export const resendOTP = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (user.isVerified) {
+            return res.status(400).json({ message: "Account is already verified" });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashedOtp = await bcrypt.hash(otp, 10);
+
+        user.otp = hashedOtp;
+        user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+        await user.save();
+
+        const message = `
+            <h1>Nirosha Sweet House</h1>
+            <p>Your new OTP for account verification is: <strong>${otp}</strong></p>
+            <p>This OTP is valid for 10 minutes.</p>
+        `;
+
+        await sendEmail({
+            email: user.email,
+            subject: "Resend OTP - Nirosha Sweet House",
+            html: message
+        });
+
+        res.status(200).json({ message: "A new OTP has been sent to your email" });
+    } catch (error) {
+        console.error("Resend OTP Error:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ message: "No account found with that email address." });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashedOtp = await bcrypt.hash(otp, 10);
+
+        user.otp = hashedOtp;
+        user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 mins
+        await user.save();
+
+        const message = `
+            <h1>Password Reset - Nirosha Sweet House</h1>
+            <p>You requested a password reset. Your OTP is: <strong>${otp}</strong></p>
+            <p>This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
+        `;
+
+        await sendEmail({
+            email: user.email,
+            subject: "Password Reset OTP",
+            html: message
+        });
+
+        res.status(200).json({ message: "Password reset OTP sent to email." });
+    } catch (error) {
+        console.error("Forgot Password Error:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+export const resetPassword = async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+
+        if (!email || !otp || !newPassword) {
+            return res.status(400).json({ message: "Email, OTP, and new password are required" });
+        }
+
+        const user = await User.findOne({ email }).select("+otp +otpExpires");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (!user.otp || !user.otpExpires) {
+            return res.status(400).json({ message: "Invalid reset request" });
+        }
+
+        if (user.otpExpires < Date.now()) {
+            return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+        }
+
+        const isMatch = await bcrypt.compare(otp, user.otp);
+
+        if (!isMatch) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+
+        user.password = await bcrypt.hash(newPassword, 10);
+        user.otp = undefined;
+        user.otpExpires = undefined;
+        // Just in case they reset password before verifying, we can consider them verified
+        user.isVerified = true; 
+        
+        await user.save();
+
+        res.status(200).json({ message: "Password has been reset successfully. You can now login." });
+    } catch (error) {
+        console.error("Reset Password Error:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
 
