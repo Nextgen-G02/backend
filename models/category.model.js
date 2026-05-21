@@ -15,10 +15,7 @@ const categorySchema = new mongoose.Schema({
         trim: true
     },
 
-    //   df: {
-    //     type: Number,
-    //     unique: true
-    // },
+
 
     description: {
         type: String,

@@ -65,11 +65,6 @@ const productSchema = new mongoose.Schema({
     default: 'pcs'
   },
 
-  // status: {
-  //   type: String,
-  //   enum: ["Active", "Inactive"],
-  //   default: "Active"
-  // },
 
   stockStatus: {
     type: String,
