@@ -15,6 +15,7 @@ import supplierRoutes from "./routes/system/supplierRoutes.js";
 import purchaseRoutes from "./routes/system/purchaseRoutes.js";
 import expenseRoutes from "./routes/system/expenseRoutes.js";
 import cashDrawerRoutes from "./routes/system/cashDrawerRoutes.js";
+import paymentRoutes from "./routes/system/paymentRoutes.js";
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use("/api/suppliers", supplierRoutes);
 app.use("/api/purchases", purchaseRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/cash-drawer", cashDrawerRoutes);
+app.use("/api/payment", paymentRoutes);
 
 // Deep Diagnostic Middleware
 app.use((err, req, res, next) => {

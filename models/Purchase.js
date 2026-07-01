@@ -19,6 +19,15 @@ const purchaseSchema = new mongoose.Schema({
     required: true,
     default: 0
   },
+  sellingPrice: {
+    type: Number,
+    required: true,
+    default: 0
+  },
+  discount: {
+    type: Number,
+    default: 0
+  },
   cost: {
     type: Number,
     required: true

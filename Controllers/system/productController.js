@@ -169,9 +169,10 @@ export const getProducts = async (req, res) => {
 export const getProductsByCategory = async (req, res) => {
     try {
         const { category } = req.params;
-        // Improved regex to match singular and plural (e.g., "cake" matches "Cakes")
+        // Strip trailing 's' if present to find the base singular word
+        const baseCategory = category.endsWith('s') ? category.slice(0, -1) : category;
         const products = await Product.find({
-            pCategory: { $regex: new RegExp(`^${category}s?$`, 'i') }
+            pCategory: { $regex: new RegExp(`^${baseCategory}s?$`, 'i') }
         });
 
         res.status(200).json(products);
@@ -183,6 +184,19 @@ export const getProductsByCategory = async (req, res) => {
         });
     }
 };
+
+export const getProductById = async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
+        res.status(200).json(product);
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to fetch product details', error: error.message });
+    }
+};
+
 export const updateProduct = async (req, res) => {
     try {
         const oldProduct = await Product.findById(req.params.id);
