@@ -4,6 +4,7 @@ import InventoryHistory from '../../models/InventoryHistory.js';
 import Expense from '../../models/Expense.js';
 import Purchase from '../../models/Purchase.js';
 import Supplier from '../../models/Supplier.js';
+import Category from '../../models/category.model.js';
 
 // Helper to log automated purchase for financials
 const logAutomatedPurchase = async (product, quantity, costPrice) => {
@@ -58,17 +59,33 @@ export const addProduct = async (req, res) => {
             expiryDate,
             unit,
             status,
+            discountPercentage,
             isIngredient,
             recipe
         } = req.body;
 
-        if (price <= 0 || costPrice <= 0) {
+        const numPrice = Number(price);
+        const numCostPrice = Number(costPrice);
+        const numDiscountPercent = Number(discountPercentage) || 0;
+
+        if (numPrice <= 0 || numCostPrice <= 0) {
             return res.status(400).json({success: false,message: 'Price and Cost Price must be greater than 0'});
+        }
+
+        const discountAmount = numPrice * (numDiscountPercent / 100);
+        if ((numPrice - discountAmount) <= numCostPrice) {
+            return res.status(400).json({success: false,message: 'Selling price after discount must be greater than cost price to ensure profit'});
         }
 
         const existingProduct = await Product.findOne({ productId });
         if (existingProduct) {
             return res.status(400).json({success: false,message: 'Product ID already exists'});
+        }
+
+        // Check if category is active
+        const category = await Category.findOne({ name: pCategory });
+        if (category && category.status === 'Inactive') {
+            return res.status(400).json({ success: false, message: 'Cannot add product to an inactive category' });
         }
 
         let stockStatus = "In Stock";
@@ -92,6 +109,7 @@ export const addProduct = async (req, res) => {
             unit,
             status,
             stockStatus,
+            discountPercentage: numDiscountPercent,
             isIngredient: isIngredient || false,
             recipe: recipe || []
         });
@@ -172,7 +190,25 @@ export const updateProduct = async (req, res) => {
             return res.status(404).json({ success: false, message: "Product not found" });
         }
 
-        const { stock, price, costPrice } = req.body;
+        const { stock, price, costPrice, pCategory, discountPercentage } = req.body;
+
+        // Validation for price, discountPercentage and costPrice
+        const currentPrice = price !== undefined ? Number(price) : oldProduct.price;
+        const currentCostPrice = costPrice !== undefined ? Number(costPrice) : oldProduct.costPrice;
+        const currentDiscountPercent = discountPercentage !== undefined ? Number(discountPercentage) : oldProduct.discountPercentage;
+
+        const discountAmount = currentPrice * (currentDiscountPercent / 100);
+        if ((currentPrice - discountAmount) <= currentCostPrice) {
+            return res.status(400).json({success: false,message: 'Selling price after discount must be greater than cost price to ensure profit'});
+        }
+
+        // Check if new category is active
+        if (pCategory && pCategory !== oldProduct.pCategory) {
+            const category = await Category.findOne({ name: pCategory });
+            if (category && category.status === 'Inactive') {
+                return res.status(400).json({ success: false, message: 'Cannot move product to an inactive category' });
+            }
+        }
 
         if ((price !== undefined && price <= 0) || (costPrice !== undefined && costPrice <= 0)) {
             return res.status(400).json({success: false,message: 'Price and Cost Price must be greater than 0'});
