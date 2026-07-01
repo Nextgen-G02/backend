@@ -3,6 +3,7 @@ import {
     addProduct, 
     getProducts, 
     getProductsByCategory, 
+    getProductById,
     updateProduct, 
     deleteProduct 
 } from "../../Controllers/system/productController.js";
@@ -14,6 +15,7 @@ const productRoutes = express.Router();
 productRoutes.post("/add", auth, authorizeRoles("admin", "staff"), upload.single('image'), addProduct);
 productRoutes.get("/", getProducts);
 productRoutes.get("/category/:category", getProductsByCategory);
+productRoutes.get("/:id", getProductById);
 productRoutes.put("/update/:id", auth, authorizeRoles("admin", "staff"), upload.single('image'), updateProduct);
 productRoutes.delete("/delete/:id", auth, authorizeRoles("admin", "staff"), deleteProduct);
 

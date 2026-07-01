@@ -19,11 +19,24 @@ export const getSupplierPurchases = async (req, res) => {
 export const createPurchase = async (req, res) => {
   try {
     // Get purchase data from frontend request
-    const { supplier: supplierId, productName, quantity, unitPrice, cost, paidAmount, supplyDate } = req.body;
+    const { supplier: supplierId, productName, quantity, unitPrice, sellingPrice, discount, cost, paidAmount, supplyDate } = req.body;
     
     const supplier = await Supplier.findById(supplierId);
     if (!supplier) {
       return res.status(404).json({ success: false, message: "Supplier not found" });
+    }
+
+    // Profit validation
+    const disc = parseFloat(discount) || 0;
+    const sPrice = parseFloat(sellingPrice) || 0;
+    const uPrice = parseFloat(unitPrice) || 0;
+    const finalSellingPrice = sPrice * (1 - disc / 100);
+    
+    if (finalSellingPrice < uPrice) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid discount! Final selling price (Rs. ${finalSellingPrice.toFixed(2)}) cannot be lower than cost price (Rs. ${uPrice.toFixed(2)}).` 
+      });
     }
 
     // Convert total cost to number
@@ -60,6 +73,8 @@ export const createPurchase = async (req, res) => {
       productName,
       quantity,
       unitPrice,
+      sellingPrice,
+      discount: disc,
       cost,
       paidAmount: actualPaid,
       appliedCredit,
@@ -81,7 +96,7 @@ export const createPurchase = async (req, res) => {
 // @access  Private/Admin
 export const updatePurchase = async (req, res) => {
   try {
-    const { productName, quantity, unitPrice, paidAmount } = req.body;
+    const { productName, quantity, unitPrice, sellingPrice, discount, paidAmount } = req.body;
     const purchase = await Purchase.findById(req.params.id);
     if (!purchase) {
       return res.status(404).json({ success: false, message: "Record not found" });
@@ -108,6 +123,17 @@ export const updatePurchase = async (req, res) => {
     if (productName) purchase.productName = productName;
     if (quantity !== undefined) purchase.quantity = parseFloat(quantity);
     if (unitPrice !== undefined) purchase.unitPrice = parseFloat(unitPrice);
+    if (sellingPrice !== undefined) purchase.sellingPrice = parseFloat(sellingPrice);
+    if (discount !== undefined) purchase.discount = parseFloat(discount);
+
+    // Re-validate profit on update
+    const finalSPrice = purchase.sellingPrice * (1 - (purchase.discount || 0) / 100);
+    if (finalSPrice < purchase.unitPrice) {
+        return res.status(400).json({ 
+            success: false, 
+            message: `Update failed! Final selling price (Rs. ${finalSPrice.toFixed(2)}) would be lower than cost price (Rs. ${purchase.unitPrice.toFixed(2)}).` 
+        });
+    }
     
     // Recalculate total cost
     purchase.cost = purchase.quantity * purchase.unitPrice;
