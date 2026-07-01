@@ -51,8 +51,6 @@ export const addProduct = async (req, res) => {
             pName,
             pCategory,
             description,
-            images,
-            // weight,
             price,
             costPrice,
             stock,
@@ -63,6 +61,19 @@ export const addProduct = async (req, res) => {
             isIngredient,
             recipe
         } = req.body;
+        
+        let images = [];
+        if (req.file && req.file.path) {
+            images.push(req.file.path);
+        } else if (req.body.images) {
+            // Fallback for cases where images is sent as a string (e.g. existing URL)
+            try {
+                const parsedImages = JSON.parse(req.body.images);
+                images = Array.isArray(parsedImages) ? parsedImages : [req.body.images];
+            } catch (e) {
+                images = [req.body.images];
+            }
+        }
 
         const numPrice = Number(price);
         const numCostPrice = Number(costPrice);
@@ -276,6 +287,18 @@ export const updateProduct = async (req, res) => {
 
         if (price !== undefined) req.body.price = Number(price);
         if (costPrice !== undefined) req.body.costPrice = Number(costPrice);
+
+        // Handle image update
+        if (req.file && req.file.path) {
+            req.body.images = [req.file.path];
+        } else if (req.body.images) {
+             try {
+                const parsedImages = JSON.parse(req.body.images);
+                req.body.images = Array.isArray(parsedImages) ? parsedImages : [req.body.images];
+            } catch (e) {
+                req.body.images = [req.body.images];
+            }
+        }
 
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
