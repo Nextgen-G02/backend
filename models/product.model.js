@@ -73,6 +73,11 @@ const productSchema = new mongoose.Schema({
   },
 
   // Customization Fields
+  homepageSection: {
+    type: String,
+    enum: ['None', 'Popular Cakes', 'Popular Sweets', 'Gift Hampers'],
+    default: 'None'
+  },
   isCustomizable: {
     type: Boolean,
     default: false
