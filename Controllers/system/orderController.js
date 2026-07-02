@@ -3,6 +3,7 @@ import Product from '../../models/product.model.js';
 import Inventory from '../../models/Inventory.js';
 import Customer from '../../models/customer.model.js';
 import InventoryHistory from '../../models/InventoryHistory.js';
+import User from '../../models/user.js';
 
 
 
@@ -104,25 +105,23 @@ export const createOrder = async (req, res) => {
             orderData.paymentStatus = 'Paid';
         }
 
-        // 1. Validate stock ONLY for DirectSale (POS) transactions
-        if (orderData.type === 'DirectSale') {
-            for (const item of orderData.items) {
-                const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
-                if (product) {
-                    // Check ingredients stock
-                    if (product.recipe && product.recipe.length > 0) {
-                        for (const ing of product.recipe) {
-                            const ingredient = ing.ingredientId;
-                            const neededQty = ing.quantity * item.quantity;
-                            if (ingredient.stock < neededQty) {
-                                throw new Error(`Not enough stock for ingredient: ${ingredient.pName}`);
-                            }
+        // 1. Validate stock for all transactions
+        for (const item of orderData.items) {
+            const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
+            if (product) {
+                // Check ingredients stock
+                if (product.recipe && product.recipe.length > 0) {
+                    for (const ing of product.recipe) {
+                        const ingredient = ing.ingredientId;
+                        const neededQty = (ing.quantity || 0) * (item.quantity || 1);
+                        if ((ingredient.stock || 0) < neededQty) {
+                            throw new Error(`Not enough stock for ingredient: ${ingredient.pName}`);
                         }
-                    } else {
-                        // Check direct product stock
-                        if (product.stock < item.quantity) {
-                            throw new Error(`Not enough stock for ${product.pName}`);
-                        }
+                    }
+                } else {
+                    // Check direct product stock
+                    if ((product.stock || 0) < item.quantity) {
+                        throw new Error(`Not enough stock for ${product.pName}`);
                     }
                 }
             }
@@ -144,10 +143,18 @@ export const createOrder = async (req, res) => {
             );
         }
 
-        // 4. Process items for inventory and stock reduction (ONLY for DirectSale)
-        if (order.type === 'DirectSale') {
-            await processStockDeduction(order);
+        // 3.5 Update registered User's phone and address profile
+        if (req.user) {
+            await User.findByIdAndUpdate(req.user._id, {
+                $set: {
+                    phone: order.phone,
+                    address: order.address
+                }
+            });
         }
+
+        // 4. Process items for inventory and stock reduction (for all orders)
+        await processStockDeduction(order);
 
         res.status(201).json(order);
 
@@ -336,12 +343,12 @@ export const updateStatus = async (req, res) => {
 
         // --- REFINED STOCK LOGIC ---
 
-        // 1. If moving TO 'Cancelled' from a state where stock was likely deducted (Preparing, Ready, Delivered) -> Restore Stock
-        if (newStatus === 'Cancelled' && (oldStatus === 'Preparing' || oldStatus === 'Ready' || oldStatus === 'Delivered')) {
+        // 1. If moving TO 'Cancelled' from any active status -> Restore Stock
+        if (newStatus === 'Cancelled' && oldStatus !== 'Cancelled') {
             await processStockRestoration(order, `Status -> Cancelled (#${order._id})`);
         } 
-        // 2. If moving TO a processed state (Preparing, Ready, Delivered) from a non-deducted state (Pending, Confirmed) -> Deduct Stock
-        else if (['Preparing', 'Ready', 'Delivered'].includes(newStatus) && (oldStatus === 'Pending' || oldStatus === 'Confirmed')) {
+        // 2. If moving FROM 'Cancelled' back to any active status -> Validate and Deduct Stock
+        else if (oldStatus === 'Cancelled' && newStatus !== 'Cancelled') {
             // Validate stock first
             for (const item of order.items) {
                 const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
@@ -360,10 +367,6 @@ export const updateStatus = async (req, res) => {
                 }
             }
             await processStockDeduction(order);
-        }
-        // 3. If moving FROM 'Cancelled' back to active -> Deduct Stock
-        else if (oldStatus === 'Cancelled' && ['Preparing', 'Ready', 'Delivered'].includes(newStatus)) {
-             await processStockDeduction(order);
         }
 
         res.json(order);

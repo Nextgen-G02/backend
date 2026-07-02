@@ -115,7 +115,7 @@ export const getDrawerHistory = async (req, res) => {
                 // Auto-close if it's from a past date
                 if (drawerDate < today) {
                     item.status = 'Closed';
-                    item.actualBalance = item.closingBalance; // Set actual to expected to close it cleanly
+                    item.actualBalance = item.closingBalance; 
                     await item.save();
                 }
                 return item;
