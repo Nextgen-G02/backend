@@ -2,8 +2,8 @@ import Category from '../../models/category.model.js';
 
 export const createCategory = async (req, res) => {
     try {
-        const { name, prefix, description} = req.body;  // get data from request body
-        const category = new Category({ name, prefix, description}); //create new category object
+        const { name, prefix, description, status} = req.body;  // get data from request body
+        const category = new Category({ name, prefix, description, status}); //create new category object
         await category.save();
         res.status(201).json({ success: true, data: category });
     } catch (error) {
@@ -34,10 +34,10 @@ export const deleteCategory = async (req, res) => {
 
 export const updateCategory = async (req, res) => {
     try {
-        const { name, prefix, description} = req.body;
+        const { name, prefix, description, status} = req.body;
         const category = await Category.findByIdAndUpdate(
             req.params.id,
-            { name, prefix, description},
+            { name, prefix, description, status},
             { new: true }
         );
         if (!category) {

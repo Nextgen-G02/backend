@@ -39,6 +39,11 @@ const orderSchema = new mongoose.Schema({
         enum: ['Order', 'DirectSale'],
         default: 'Order'
     },
+    source: {
+        type: String,
+        enum: ['Website', 'In-Store'],
+        default: 'In-Store'
+    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
