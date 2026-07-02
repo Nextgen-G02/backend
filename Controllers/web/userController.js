@@ -140,17 +140,19 @@ export const createStaff = async (req, res) => {
   try {
     const { firstName, lastName, email, password, nic, address } = req.body;
 
-    if (!firstName || !lastName || !email || !password || !nic || !address) {
+    if (!firstName || !lastName || !password || !nic || !address) {
       return res.status(400).json({
-        message: "All fields are required including NIC and Address"
+        message: "First name, last name, password, NIC, and address are required"
       });
     }
 
-    const existingUser = await User.findOne({ email });
+    const finalEmail = email || `${nic}@nirosha.com`;
+
+    const existingUser = await User.findOne({ $or: [{ email: finalEmail }, { nic }] });
 
     if (existingUser) {
       return res.status(400).json({
-        message: "User already exists"
+        message: "User with this email or NIC already exists"
       });
     }
 
@@ -159,7 +161,7 @@ export const createStaff = async (req, res) => {
     const staff = await User.create({
       firstName,
       lastName,
-      email,
+      email: finalEmail,
       password: hashedPassword,
       role: "staff",
       nic,
@@ -178,7 +180,23 @@ export const createStaff = async (req, res) => {
     });
 
     } catch (error) {
-        console.error(error);
+        console.error("Error creating staff:", error);
+        
+        // Handle Mongoose Validation Errors
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({
+                message: messages.join(', ')
+            });
+        }
+        
+        // Handle MongoDB Duplicate Key Error (just in case)
+        if (error.code === 11000) {
+            return res.status(400).json({
+                message: "A user with this Email or NIC already exists in the database."
+            });
+        }
+
         res.status(500).json({
             message: "Server error"
         });
@@ -214,8 +232,13 @@ export const updateUser = async (req, res) => {
     try {
         // Extract updated fields from request body
         const { firstName, lastName, email, role, password, nic, address } = req.body;
-        // Store updated fields inside object
-        const updateData = { firstName, lastName, email, role, nic, address };
+        const updateData = { firstName, lastName, role, nic, address };
+        
+        if (email) {
+            updateData.email = email;
+        } else if (nic) {
+            updateData.email = `${nic}@nirosha.com`;
+        }
 
         if (password) {
             updateData.password = await bcrypt.hash(password, 10);

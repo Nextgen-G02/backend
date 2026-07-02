@@ -58,16 +58,20 @@ orderSchema.pre('save', async function () {
 
     // Automation for DirectSale
     if (this.type === 'DirectSale') {
-        this.paymentStatus = 'Paid';
-        this.advanceAmount = this.totalAmount;
-    } else {
-        // Automation for Scheduled Orders
-        if (this.advanceAmount >= this.totalAmount && this.totalAmount > 0) {
+        if (this.isNew || this.isModified('type')) {
             this.paymentStatus = 'Paid';
-        } else if (this.advanceAmount > 0) {
-            this.paymentStatus = 'Partially Paid';
-        } else {
-            this.paymentStatus = 'Unpaid';
+            this.advanceAmount = this.totalAmount;
+        }
+    } else {
+        // Automation for Scheduled Orders ONLY if it's a new order or if advance amount was changed
+        if (this.isNew || this.isModified('advanceAmount')) {
+            if (this.advanceAmount >= this.totalAmount && this.totalAmount > 0) {
+                this.paymentStatus = 'Paid';
+            } else if (this.advanceAmount > 0) {
+                this.paymentStatus = 'Partially Paid';
+            } else {
+                this.paymentStatus = 'Unpaid';
+            }
         }
     }
 });

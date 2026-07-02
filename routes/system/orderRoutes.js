@@ -9,6 +9,7 @@ router.use(auth);
 
 router.post('/', orderController.createOrder);
 router.get('/', orderController.getOrders);
+router.get('/customer', orderController.getCustomerOrders);
 router.get('/:id', orderController.getOrderById);
 router.put('/:id', orderController.updateOrder);
 router.patch('/:id/status', orderController.updateStatus);
