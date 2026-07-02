@@ -4,6 +4,7 @@ import InventoryHistory from '../../models/InventoryHistory.js';
 import Expense from '../../models/Expense.js';
 import Purchase from '../../models/Purchase.js';
 import Supplier from '../../models/Supplier.js';
+import Category from '../../models/category.model.js';
 
 // Helper to log automated purchase for financials
 const logAutomatedPurchase = async (product, quantity, costPrice) => {
@@ -50,25 +51,53 @@ export const addProduct = async (req, res) => {
             pName,
             pCategory,
             description,
-            images,
-            // weight,
             price,
             costPrice,
             stock,
             expiryDate,
             unit,
             status,
+            discountPercentage,
             isIngredient,
-            recipe
+            recipe,
+            weight
         } = req.body;
+        
+        let images = [];
+        if (req.file && req.file.path) {
+            images.push(req.file.path);
+        } else if (req.body.images) {
+            // Fallback for cases where images is sent as a string (e.g. existing URL)
+            try {
+                const parsedImages = JSON.parse(req.body.images);
+                images = Array.isArray(parsedImages) ? parsedImages : [req.body.images];
+            } catch (e) {
+                images = [req.body.images];
+            }
+        }
 
-        if (price <= 0 || costPrice <= 0) {
+        const numPrice = Number(price);
+        const numCostPrice = Number(costPrice);
+        const numDiscountPercent = Number(discountPercentage) || 0;
+
+        if (numPrice <= 0 || numCostPrice <= 0) {
             return res.status(400).json({success: false,message: 'Price and Cost Price must be greater than 0'});
+        }
+
+        const discountAmount = numPrice * (numDiscountPercent / 100);
+        if ((numPrice - discountAmount) <= numCostPrice) {
+            return res.status(400).json({success: false,message: 'Selling price after discount must be greater than cost price to ensure profit'});
         }
 
         const existingProduct = await Product.findOne({ productId });
         if (existingProduct) {
             return res.status(400).json({success: false,message: 'Product ID already exists'});
+        }
+
+        // Check if category is active
+        const category = await Category.findOne({ name: pCategory });
+        if (category && category.status === 'Inactive') {
+            return res.status(400).json({ success: false, message: 'Cannot add product to an inactive category' });
         }
 
         let stockStatus = "In Stock";
@@ -84,7 +113,7 @@ export const addProduct = async (req, res) => {
             pCategory,
             description,
             images,
-            // weight,
+            weight: weight !== undefined && weight !== "" ? Number(weight) : undefined,
             price,
             costPrice,
             stock,
@@ -92,6 +121,7 @@ export const addProduct = async (req, res) => {
             unit,
             status,
             stockStatus,
+            discountPercentage: numDiscountPercent,
             isIngredient: isIngredient || false,
             recipe: recipe || []
         });
@@ -151,9 +181,10 @@ export const getProducts = async (req, res) => {
 export const getProductsByCategory = async (req, res) => {
     try {
         const { category } = req.params;
-        // Improved regex to match singular and plural (e.g., "cake" matches "Cakes")
+        // Strip trailing 's' if present to find the base singular word
+        const baseCategory = category.endsWith('s') ? category.slice(0, -1) : category;
         const products = await Product.find({
-            pCategory: { $regex: new RegExp(`^${category}s?$`, 'i') }
+            pCategory: { $regex: new RegExp(`^${baseCategory}s?$`, 'i') }
         });
 
         res.status(200).json(products);
@@ -165,6 +196,19 @@ export const getProductsByCategory = async (req, res) => {
         });
     }
 };
+
+export const getProductById = async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
+        res.status(200).json(product);
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to fetch product details', error: error.message });
+    }
+};
+
 export const updateProduct = async (req, res) => {
     try {
         const oldProduct = await Product.findById(req.params.id);
@@ -172,7 +216,25 @@ export const updateProduct = async (req, res) => {
             return res.status(404).json({ success: false, message: "Product not found" });
         }
 
-        const { stock, price, costPrice } = req.body;
+        const { stock, price, costPrice, pCategory, discountPercentage } = req.body;
+
+        // Validation for price, discountPercentage and costPrice
+        const currentPrice = price !== undefined ? Number(price) : oldProduct.price;
+        const currentCostPrice = costPrice !== undefined ? Number(costPrice) : oldProduct.costPrice;
+        const currentDiscountPercent = discountPercentage !== undefined ? Number(discountPercentage) : oldProduct.discountPercentage;
+
+        const discountAmount = currentPrice * (currentDiscountPercent / 100);
+        if ((currentPrice - discountAmount) <= currentCostPrice) {
+            return res.status(400).json({success: false,message: 'Selling price after discount must be greater than cost price to ensure profit'});
+        }
+
+        // Check if new category is active
+        if (pCategory && pCategory !== oldProduct.pCategory) {
+            const category = await Category.findOne({ name: pCategory });
+            if (category && category.status === 'Inactive') {
+                return res.status(400).json({ success: false, message: 'Cannot move product to an inactive category' });
+            }
+        }
 
         if ((price !== undefined && price <= 0) || (costPrice !== undefined && costPrice <= 0)) {
             return res.status(400).json({success: false,message: 'Price and Cost Price must be greater than 0'});
@@ -226,6 +288,21 @@ export const updateProduct = async (req, res) => {
 
         if (price !== undefined) req.body.price = Number(price);
         if (costPrice !== undefined) req.body.costPrice = Number(costPrice);
+        if (req.body.weight !== undefined) {
+            req.body.weight = req.body.weight === "" ? null : Number(req.body.weight);
+        }
+
+        // Handle image update
+        if (req.file && req.file.path) {
+            req.body.images = [req.file.path];
+        } else if (req.body.images) {
+             try {
+                const parsedImages = JSON.parse(req.body.images);
+                req.body.images = Array.isArray(parsedImages) ? parsedImages : [req.body.images];
+            } catch (e) {
+                req.body.images = [req.body.images];
+            }
+        }
 
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,

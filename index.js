@@ -30,7 +30,7 @@ const startServer = async () => {
             // Index likely doesn't exist or already dropped
         }
 
-        app.listen(PORT, () => {
+        app.listen(PORT, '0.0.0.0', () => {
             console.log(`Server running on port ${PORT}`);
         });
     }
