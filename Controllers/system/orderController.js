@@ -410,3 +410,20 @@ export const deleteOrder = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// GET ORDERS FOR LOGGED IN CUSTOMER
+export const getCustomerOrders = async (req, res) => {
+    try {
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const orders = await Order.find({ createdBy: req.user._id })
+            .sort({ createdAt: -1 });
+            
+        res.status(200).json(orders);
+    } catch (error) {
+        console.error("Error fetching customer orders:", error);
+        res.status(500).json({ message: 'Failed to fetch your orders' });
+    }
+};
