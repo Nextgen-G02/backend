@@ -24,6 +24,16 @@ export const generateHash = (req, res) => {
         // Step 3: Generate the final MD5 hash and uppercase it
         const hash = crypto.createHash('md5').update(hashString).digest('hex').toUpperCase();
 
+        console.log("PAYHERE DEBUG => ", {
+            merchantId,
+            order_id,
+            formattedAmount,
+            currency,
+            hashedSecret,
+            hashString,
+            finalHash: hash
+        });
+
         res.json({ hash, merchantId, currency, amount: formattedAmount });
     } catch (error) {
         console.error("Error generating hash:", error);
