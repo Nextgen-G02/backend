@@ -59,7 +59,8 @@ export const addProduct = async (req, res) => {
             status,
             discountPercentage,
             isIngredient,
-            recipe
+            recipe,
+            weight
         } = req.body;
         
         let images = [];
@@ -112,7 +113,7 @@ export const addProduct = async (req, res) => {
             pCategory,
             description,
             images,
-            // weight,
+            weight: weight !== undefined && weight !== "" ? Number(weight) : undefined,
             price,
             costPrice,
             stock,
@@ -287,6 +288,9 @@ export const updateProduct = async (req, res) => {
 
         if (price !== undefined) req.body.price = Number(price);
         if (costPrice !== undefined) req.body.costPrice = Number(costPrice);
+        if (req.body.weight !== undefined) {
+            req.body.weight = req.body.weight === "" ? null : Number(req.body.weight);
+        }
 
         // Handle image update
         if (req.file && req.file.path) {
