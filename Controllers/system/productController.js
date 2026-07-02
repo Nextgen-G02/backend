@@ -60,7 +60,8 @@ export const addProduct = async (req, res) => {
             discountPercentage,
             isIngredient,
             recipe,
-            weight
+            weight,
+            homepageSection
         } = req.body;
         
         let images = [];
@@ -123,7 +124,8 @@ export const addProduct = async (req, res) => {
             stockStatus,
             discountPercentage: numDiscountPercent,
             isIngredient: isIngredient || false,
-            recipe: recipe || []
+            recipe: recipe || [],
+            homepageSection: homepageSection || 'None'
         });
 
         await newProduct.save();
@@ -183,9 +185,7 @@ export const getProductsByCategory = async (req, res) => {
         const { category } = req.params;
         // Strip trailing 's' if present to find the base singular word
         const baseCategory = category.endsWith('s') ? category.slice(0, -1) : category;
-        const products = await Product.find({
-            pCategory: { $regex: new RegExp(`^${baseCategory}s?$`, 'i') }
-        });
+        const products = await Product.find({ pCategory: { $regex: new RegExp(`^${baseCategory}s?$`, 'i') } });
 
         res.status(200).json(products);
     } catch (error) {
@@ -206,6 +206,30 @@ export const getProductById = async (req, res) => {
         res.status(200).json(product);
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to fetch product details', error: error.message });
+    }
+};
+
+export const getProductsByHomepageSection = async (req, res) => {
+    try {
+        const { section } = req.params;
+        const products = await Product.find({ homepageSection: section });
+        res.status(200).json(products);
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to fetch section products', error: error.message });
+    }
+};
+
+export const updateProductSection = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { homepageSection } = req.body;
+        const updated = await Product.findByIdAndUpdate(id, { homepageSection }, { new: true });
+        if (!updated) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        res.status(200).json(updated);
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to update product section', error: error.message });
     }
 };
 
