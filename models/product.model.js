@@ -72,10 +72,9 @@ const productSchema = new mongoose.Schema({
     default: "In Stock"
   },
 
-  // Customization Fields
   homepageSection: {
     type: String,
-    enum: ['None', 'Popular Cakes', 'Popular Sweets', 'Gift Hampers'],
+    enum: ['None', 'Popular Cakes', 'Artisan Sweets', 'The Gifting Collection'],
     default: 'None'
   },
   isCustomizable: {

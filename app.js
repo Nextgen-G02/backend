@@ -3,6 +3,7 @@ import cors from "cors";
 
 // Web Routes
 import userRouter from "./routes/web/userRoutes.js";
+import newsletterRoutes from "./routes/web/newsletterRoutes.js";
 
 // System Routes
 import productRoutes from "./routes/system/productRoutes.js";
@@ -38,6 +39,7 @@ app.get("/", (req, res) => {
 
 // API Endpoints
 app.use("/api/auth", userRouter);
+app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/categories", categoryRoutes);
