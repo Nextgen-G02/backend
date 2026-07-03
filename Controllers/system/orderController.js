@@ -4,12 +4,41 @@ import Inventory from '../../models/Inventory.js';
 import Customer from '../../models/customer.model.js';
 import InventoryHistory from '../../models/InventoryHistory.js';
 import User from '../../models/user.js';
+import SystemAlert from '../../models/SystemAlert.js';
 
 
 
 
 
 // --- HELPER FUNCTIONS ---
+const triggerLowStockAlert = async (productId, productName, currentStock) => {
+    try {
+        if (currentStock >= 5) return; // Only trigger alert for stock levels below 5
+
+        const type = currentStock <= 0 ? "Out of Stock" : "Low Stock";
+        const message = `${productName} is ${type.toLowerCase()}! Current stock: ${currentStock}`;
+
+        // Check if there is already an unread alert of the same type for this product
+        const existingAlert = await SystemAlert.findOne({
+            productId,
+            type,
+            read: false
+        });
+
+        if (!existingAlert) {
+            await SystemAlert.create({
+                productId,
+                productName,
+                message,
+                type
+            });
+            console.log(`[SYSTEM ALERT] Product "${productName}" entered low stock threshold: ${currentStock}`);
+        }
+    } catch (error) {
+        console.error("Failed to create system alert:", error);
+    }
+};
+
 const processStockDeduction = async (order) => {
     for (const item of order.items) {
         const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
@@ -23,6 +52,7 @@ const processStockDeduction = async (order) => {
                     
                     await Product.findByIdAndUpdate(ingredient._id, { $set: { stock: newStock, stockStatus: newStatus } });
                     await Inventory.findOneAndUpdate({ productId: ingredient._id }, { quantity: newStock, lastUpdated: Date.now() }, { upsert: true });
+                    await triggerLowStockAlert(ingredient._id, ingredient.pName, newStock);
                     await InventoryHistory.create({
                         productId: ingredient._id,
                         type: 'OUT',
@@ -38,6 +68,7 @@ const processStockDeduction = async (order) => {
                 
                 await Product.findByIdAndUpdate(product._id, { $set: { stock: newStock, stockStatus: newStatus } });
                 await Inventory.findOneAndUpdate({ productId: product._id }, { quantity: newStock, lastUpdated: Date.now() }, { upsert: true });
+                await triggerLowStockAlert(product._id, product.pName, newStock);
                 await InventoryHistory.create({
                     productId: product._id,
                     type: 'OUT',
@@ -105,27 +136,32 @@ export const createOrder = async (req, res) => {
             orderData.paymentStatus = 'Paid';
         }
 
-        // 1. Validate stock for all transactions
-        for (const item of orderData.items) {
-            const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
-            if (product) {
-                // Check ingredients stock
-                if (product.recipe && product.recipe.length > 0) {
-                    for (const ing of product.recipe) {
-                        const ingredient = ing.ingredientId;
-                        const neededQty = (ing.quantity || 0) * (item.quantity || 1);
-                        if ((ingredient.stock || 0) < neededQty) {
-                            throw new Error(`Not enough stock for ingredient: ${ingredient.pName}`);
+        // 1. Validate stock ONLY for POS/Direct Sales (Walk-in customers)
+        // Standard and Website orders bypass this because they are made-to-order.
+        /*
+        if (orderData.type === 'DirectSale') {
+            for (const item of orderData.items) {
+                const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
+                if (product) {
+                    // Check ingredients stock
+                    if (product.recipe && product.recipe.length > 0) {
+                        for (const ing of product.recipe) {
+                            const ingredient = ing.ingredientId;
+                            const neededQty = (ing.quantity || 0) * (item.quantity || 1);
+                            if ((ingredient.stock || 0) < neededQty) {
+                                throw new Error(`Not enough stock for ingredient: ${ingredient.pName}`);
+                            }
                         }
-                    }
-                } else {
-                    // Check direct product stock
-                    if ((product.stock || 0) < item.quantity) {
-                        throw new Error(`Not enough stock for ${product.pName}`);
+                    } else {
+                        // Check direct product stock
+                        if ((product.stock || 0) < item.quantity) {
+                            throw new Error(`Not enough stock for ${product.pName}`);
+                        }
                     }
                 }
             }
         }
+        */
 
         // 2. Save the order
         const order = new Order(orderData);
