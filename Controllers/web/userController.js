@@ -148,11 +148,17 @@ export const createStaff = async (req, res) => {
 
     const finalEmail = email || `${nic}@nirosha.com`;
 
-    const existingUser = await User.findOne({ $or: [{ email: finalEmail }, { nic }] });
-
-    if (existingUser) {
+    const existingEmail = await User.findOne({ email: finalEmail });
+    if (existingEmail) {
       return res.status(400).json({
-        message: "User with this email or NIC already exists"
+        message: `User with email ${finalEmail} already exists`
+      });
+    }
+
+    const existingNic = await User.findOne({ nic });
+    if (existingNic) {
+      return res.status(400).json({
+        message: `User with NIC ${nic} already exists`
       });
     }
 
@@ -232,12 +238,12 @@ export const updateUser = async (req, res) => {
     try {
         // Extract updated fields from request body
         const { firstName, lastName, email, role, password, nic, address } = req.body;
-        const updateData = { firstName, lastName, role, nic, address };
+        const updateData = { firstName, lastName, role, address };
+        
+        if (nic) updateData.nic = nic;
         
         if (email) {
             updateData.email = email;
-        } else if (nic) {
-            updateData.email = `${nic}@nirosha.com`;
         }
 
         if (password) {
