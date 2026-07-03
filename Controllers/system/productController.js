@@ -185,7 +185,9 @@ export const getProductsByCategory = async (req, res) => {
         const { category } = req.params;
         // Strip trailing 's' if present to find the base singular word
         const baseCategory = category.endsWith('s') ? category.slice(0, -1) : category;
-        const products = await Product.find({ pCategory: { $regex: new RegExp(`^${baseCategory}s?$`, 'i') } });
+        const products = await Product.find({ pCategory: { $regex: new RegExp(`^${baseCategory}s?$`, 'i') } })
+            .select('-recipe')
+            .lean();
 
         res.status(200).json(products);
     } catch (error) {
@@ -212,7 +214,9 @@ export const getProductById = async (req, res) => {
 export const getProductsByHomepageSection = async (req, res) => {
     try {
         const { section } = req.params;
-        const products = await Product.find({ homepageSection: section });
+        const products = await Product.find({ homepageSection: section })
+            .select('-recipe')
+            .lean();
         res.status(200).json(products);
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to fetch section products', error: error.message });
