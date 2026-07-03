@@ -127,7 +127,7 @@ export const broadcastNewsletter = async (req, res) => {
         <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; color: #334155;">
           <!-- Header Image / Banner Area -->
           <div style="background-color: #0f172a; padding: 40px 20px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">NIROSHA <span style="color: #C29D59; font-style: italic; font-weight: 400;">Sweets</span></h1>
+            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">Nirosha <span style="color: #C29D59; font-style: italic; font-weight: 400;">Sweet House</span></h1>
             <p style="color: #94a3b8; font-size: 14px; margin-top: 10px; text-transform: uppercase; letter-spacing: 2px;">Fresh Batches • Artisan Quality</p>
           </div>
 

@@ -4,8 +4,7 @@ import generateToken from "../../utils/generateToken.js";
 import { OAuth2Client } from 'google-auth-library';
 import sendEmail from "../../utils/sendEmail.js";
 
-// Create Google OAuth client using client ID from environment variables
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+// OAuth2Client will be initialized inside the function to ensure env vars are loaded
 
 export const registerUser = async (req, res) => {
     try {
@@ -276,6 +275,9 @@ export const googleLogin = async (req, res) => {
       });
     }
 
+    // Create Google OAuth client using client ID from environment variables
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
     // Verify token using Google API
     const ticket = await client.verifyIdToken({
       idToken: tokenId,
@@ -290,8 +292,8 @@ export const googleLogin = async (req, res) => {
     if (!user) {
       // Register new user if they don't exist
       user = await User.create({
-        firstName: given_name,
-        lastName: family_name || " ",
+        firstName: given_name || "Google",
+        lastName: family_name || "User",
         email,
         password: await bcrypt.hash(Math.random().toString(36).slice(-10), 10), // Random password
         role: "customer",
