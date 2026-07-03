@@ -65,8 +65,9 @@ export const addProduct = async (req, res) => {
         } = req.body;
         
         let images = [];
-        if (req.file && req.file.path) {
-            images.push(req.file.path);
+        if (req.file) {
+            const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            images.push(imageUrl);
         } else if (req.body.images) {
             // Fallback for cases where images is sent as a string (e.g. existing URL)
             try {
@@ -80,9 +81,18 @@ export const addProduct = async (req, res) => {
         const numPrice = Number(price);
         const numCostPrice = Number(costPrice);
         const numDiscountPercent = Number(discountPercentage) || 0;
+        const numStock = Number(stock);
 
         if (numPrice <= 0 || numCostPrice <= 0) {
             return res.status(400).json({success: false,message: 'Price and Cost Price must be greater than 0'});
+        }
+
+        if (numStock < 0) {
+            return res.status(400).json({success: false,message: 'Stock quantity cannot be negative'});
+        }
+
+        if (numDiscountPercent < 0 || numDiscountPercent > 100) {
+            return res.status(400).json({success: false,message: 'Discount percentage must be between 0 and 100'});
         }
 
         const discountAmount = numPrice * (numDiscountPercent / 100);
@@ -260,6 +270,14 @@ export const updateProduct = async (req, res) => {
             }
         }
 
+        if (stock !== undefined && Number(stock) < 0) {
+            return res.status(400).json({ success: false, message: 'Stock quantity cannot be negative' });
+        }
+
+        if (currentDiscountPercent < 0 || currentDiscountPercent > 100) {
+            return res.status(400).json({ success: false, message: 'Discount percentage must be between 0 and 100' });
+        }
+
         if ((price !== undefined && price <= 0) || (costPrice !== undefined && costPrice <= 0)) {
             return res.status(400).json({success: false,message: 'Price and Cost Price must be greater than 0'});
         }
@@ -317,8 +335,9 @@ export const updateProduct = async (req, res) => {
         }
 
         // Handle image update
-        if (req.file && req.file.path) {
-            req.body.images = [req.file.path];
+        if (req.file) {
+            const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            req.body.images = [imageUrl];
         } else if (req.body.images) {
              try {
                 const parsedImages = JSON.parse(req.body.images);
