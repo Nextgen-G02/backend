@@ -18,7 +18,7 @@ const processStockDeduction = async (order) => {
                 for (const ing of product.recipe) {
                     const ingredient = ing.ingredientId;
                     const deduction = (ing.quantity || 0) * (item.quantity || 1);
-                    const newStock = (ingredient.stock || 0) - deduction;
+                    const newStock = Math.max(0, (ingredient.stock || 0) - deduction);
                     const newStatus = newStock <= 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
                     
                     await Product.findByIdAndUpdate(ingredient._id, { $set: { stock: newStock, stockStatus: newStatus } });
@@ -33,7 +33,7 @@ const processStockDeduction = async (order) => {
                 }
             } else {
                 const deduction = (item.quantity || 1);
-                const newStock = (product.stock || 0) - deduction;
+                const newStock = Math.max(0, (product.stock || 0) - deduction);
                 const newStatus = newStock <= 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
                 
                 await Product.findByIdAndUpdate(product._id, { $set: { stock: newStock, stockStatus: newStatus } });
