@@ -4,12 +4,41 @@ import Inventory from '../../models/Inventory.js';
 import Customer from '../../models/customer.model.js';
 import InventoryHistory from '../../models/InventoryHistory.js';
 import User from '../../models/user.js';
+import SystemAlert from '../../models/SystemAlert.js';
 
 
 
 
 
 // --- HELPER FUNCTIONS ---
+const triggerLowStockAlert = async (productId, productName, currentStock) => {
+    try {
+        if (currentStock >= 5) return; // Only trigger alert for stock levels below 5
+
+        const type = currentStock <= 0 ? "Out of Stock" : "Low Stock";
+        const message = `${productName} is ${type.toLowerCase()}! Current stock: ${currentStock}`;
+
+        // Check if there is already an unread alert of the same type for this product
+        const existingAlert = await SystemAlert.findOne({
+            productId,
+            type,
+            read: false
+        });
+
+        if (!existingAlert) {
+            await SystemAlert.create({
+                productId,
+                productName,
+                message,
+                type
+            });
+            console.log(`[SYSTEM ALERT] Product "${productName}" entered low stock threshold: ${currentStock}`);
+        }
+    } catch (error) {
+        console.error("Failed to create system alert:", error);
+    }
+};
+
 const processStockDeduction = async (order) => {
     for (const item of order.items) {
         const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
@@ -23,6 +52,7 @@ const processStockDeduction = async (order) => {
                     
                     await Product.findByIdAndUpdate(ingredient._id, { $set: { stock: newStock, stockStatus: newStatus } });
                     await Inventory.findOneAndUpdate({ productId: ingredient._id }, { quantity: newStock, lastUpdated: Date.now() }, { upsert: true });
+                    await triggerLowStockAlert(ingredient._id, ingredient.pName, newStock);
                     await InventoryHistory.create({
                         productId: ingredient._id,
                         type: 'OUT',
@@ -38,6 +68,7 @@ const processStockDeduction = async (order) => {
                 
                 await Product.findByIdAndUpdate(product._id, { $set: { stock: newStock, stockStatus: newStatus } });
                 await Inventory.findOneAndUpdate({ productId: product._id }, { quantity: newStock, lastUpdated: Date.now() }, { upsert: true });
+                await triggerLowStockAlert(product._id, product.pName, newStock);
                 await InventoryHistory.create({
                     productId: product._id,
                     type: 'OUT',
