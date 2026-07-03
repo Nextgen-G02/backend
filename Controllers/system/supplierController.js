@@ -1,4 +1,4 @@
-import Supplier from "../../models/Supplier.js";
+import Supplier from "../../models/supplier.js";
 
 // @desc    Get all suppliers
 // @route   GET /api/suppliers
