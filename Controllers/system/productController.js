@@ -3,7 +3,7 @@ import Inventory from '../../models/Inventory.js';
 import InventoryHistory from '../../models/InventoryHistory.js';
 import Expense from '../../models/Expense.js';
 import Purchase from '../../models/Purchase.js';
-import Supplier from '../../models/Supplier.js';
+import Supplier from '../../models/supplier.js';
 import Category from '../../models/category.model.js';
 
 // Helper to log automated purchase for financials
@@ -15,7 +15,7 @@ const logAutomatedPurchase = async (product, quantity, costPrice) => {
         if (!supplier) {
             // Attempt to find by supplierId if name changed
             supplier = await Supplier.findOne({ supplierId: "SUP-SYSTEM" });
-            
+
             if (!supplier) {
                 supplier = await Supplier.create({
                     name: "System / Direct",
@@ -63,7 +63,7 @@ export const addProduct = async (req, res) => {
             weight,
             homepageSection
         } = req.body;
-        
+
         let images = [];
         if (req.file) {
             const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
@@ -84,25 +84,25 @@ export const addProduct = async (req, res) => {
         const numStock = Number(stock);
 
         if (numPrice <= 0 || numCostPrice <= 0) {
-            return res.status(400).json({success: false,message: 'Price and Cost Price must be greater than 0'});
+            return res.status(400).json({ success: false, message: 'Price and Cost Price must be greater than 0' });
         }
 
         if (numStock < 0) {
-            return res.status(400).json({success: false,message: 'Stock quantity cannot be negative'});
+            return res.status(400).json({ success: false, message: 'Stock quantity cannot be negative' });
         }
 
         if (numDiscountPercent < 0 || numDiscountPercent > 100) {
-            return res.status(400).json({success: false,message: 'Discount percentage must be between 0 and 100'});
+            return res.status(400).json({ success: false, message: 'Discount percentage must be between 0 and 100' });
         }
 
         const discountAmount = numPrice * (numDiscountPercent / 100);
         if ((numPrice - discountAmount) <= numCostPrice) {
-            return res.status(400).json({success: false,message: 'Selling price after discount must be greater than cost price to ensure profit'});
+            return res.status(400).json({ success: false, message: 'Selling price after discount must be greater than cost price to ensure profit' });
         }
 
         const existingProduct = await Product.findOne({ productId });
         if (existingProduct) {
-            return res.status(400).json({success: false,message: 'Product ID already exists'});
+            return res.status(400).json({ success: false, message: 'Product ID already exists' });
         }
 
         // Check if category is active
@@ -163,10 +163,10 @@ export const addProduct = async (req, res) => {
         if (newProduct.stock > 0 && newProduct.costPrice > 0) {
             await logAutomatedPurchase(newProduct, newProduct.stock, newProduct.costPrice);
         }
-        res.status(201).json({success: true,message: 'Product added successfully',data: newProduct});
+        res.status(201).json({ success: true, message: 'Product added successfully', data: newProduct });
     }
     catch (error) {
-        res.status(500).json({success: false,message: 'Failed to add product',error: error.message});
+        res.status(500).json({ success: false, message: 'Failed to add product', error: error.message });
     }
 };
 
@@ -176,7 +176,7 @@ export const getProducts = async (req, res) => {
         const products = await Product.find({})
             .select('-recipe')
             .lean();
-            
+
         res.status(200).json({
             success: true,
             data: products
@@ -263,7 +263,7 @@ export const updateProduct = async (req, res) => {
 
         const discountAmount = currentPrice * (currentDiscountPercent / 100);
         if ((currentPrice - discountAmount) <= currentCostPrice) {
-            return res.status(400).json({success: false,message: 'Selling price after discount must be greater than cost price to ensure profit'});
+            return res.status(400).json({ success: false, message: 'Selling price after discount must be greater than cost price to ensure profit' });
         }
 
         // Check if new category is active
@@ -283,7 +283,7 @@ export const updateProduct = async (req, res) => {
         }
 
         if ((price !== undefined && price <= 0) || (costPrice !== undefined && costPrice <= 0)) {
-            return res.status(400).json({success: false,message: 'Price and Cost Price must be greater than 0'});
+            return res.status(400).json({ success: false, message: 'Price and Cost Price must be greater than 0' });
         }
         const newStock = Number(stock); // stock count
         if (stock !== undefined && newStock !== oldProduct.stock) {   // this is run only stock is changed
@@ -305,7 +305,7 @@ export const updateProduct = async (req, res) => {
                 { upsert: true }  // if not fount create new record
             );
 
-    
+
             if (type === 'IN' && difference > 0) {
                 const currentCostPrice = costPrice !== undefined ? costPrice : oldProduct.costPrice;
                 await logAutomatedPurchase(oldProduct, difference, currentCostPrice);
@@ -343,7 +343,7 @@ export const updateProduct = async (req, res) => {
             const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
             req.body.images = [imageUrl];
         } else if (req.body.images) {
-             try {
+            try {
                 const parsedImages = JSON.parse(req.body.images);
                 req.body.images = Array.isArray(parsedImages) ? parsedImages : [req.body.images];
             } catch (e) {
