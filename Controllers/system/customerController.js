@@ -7,19 +7,36 @@ export const getCustomers = async (req, res) => {
         // Only fetch registered users with role: 'customer'
         const users = await User.find({ role: 'customer' });
         const userIds = users.map(u => u._id);
+        const phones = users.map(u => u.phone).filter(p => p);
 
-        // Fetch all orders for these users to calculate statistics
-        const orders = await Order.find({ createdBy: { $in: userIds } });
+        // Fetch all orders for these users to calculate statistics by phone or user ID
+        const orders = await Order.find({
+            $or: [
+                { createdBy: { $in: userIds } },
+                { phone: { $in: phones } }
+            ]
+        });
 
         // Group orders by user ID
         const ordersByUser = {};
         orders.forEach(order => {
+            let matchedUser = null;
             if (order.createdBy) {
-                const uidStr = order.createdBy.toString();
+                matchedUser = users.find(u => u._id.toString() === order.createdBy.toString());
+            }
+            if (!matchedUser && order.phone) {
+                matchedUser = users.find(u => u.phone === order.phone);
+            }
+
+            if (matchedUser) {
+                const uidStr = matchedUser._id.toString();
                 if (!ordersByUser[uidStr]) {
                     ordersByUser[uidStr] = [];
                 }
-                ordersByUser[uidStr].push(order);
+                // Avoid pushing duplicate orders if it matched both criteria
+                if (!ordersByUser[uidStr].some(o => o._id.toString() === order._id.toString())) {
+                    ordersByUser[uidStr].push(order);
+                }
             }
         });
 
@@ -84,9 +101,25 @@ export const getCustomerByPhone = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Customer not found' });
         }
 
-        const userOrders = await Order.find({ createdBy: user._id });
-        const totalSpent = userOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-        const lastOrderDate = userOrders.length ? userOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0].createdAt : null;
+        const userOrders = await Order.find({
+            $or: [
+                { createdBy: user._id },
+                { phone: user.phone || phone }
+            ]
+        });
+
+        // Remove duplicates
+        const uniqueOrders = [];
+        const orderIds = new Set();
+        userOrders.forEach(o => {
+            if (!orderIds.has(o._id.toString())) {
+                orderIds.add(o._id.toString());
+                uniqueOrders.push(o);
+            }
+        });
+
+        const totalSpent = uniqueOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const lastOrderDate = uniqueOrders.length ? uniqueOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0].createdAt : null;
 
         res.status(200).json({
             success: true,
@@ -95,7 +128,7 @@ export const getCustomerByPhone = async (req, res) => {
                 name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Customer',
                 phone: user.phone || phone,
                 address: user.address || '',
-                totalOrders: userOrders.length,
+                totalOrders: uniqueOrders.length,
                 totalSpent: totalSpent,
                 lastOrderDate: lastOrderDate,
                 email: user.email,
