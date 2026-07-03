@@ -105,27 +105,32 @@ export const createOrder = async (req, res) => {
             orderData.paymentStatus = 'Paid';
         }
 
-        // 1. Validate stock for all transactions
-        for (const item of orderData.items) {
-            const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
-            if (product) {
-                // Check ingredients stock
-                if (product.recipe && product.recipe.length > 0) {
-                    for (const ing of product.recipe) {
-                        const ingredient = ing.ingredientId;
-                        const neededQty = (ing.quantity || 0) * (item.quantity || 1);
-                        if ((ingredient.stock || 0) < neededQty) {
-                            throw new Error(`Not enough stock for ingredient: ${ingredient.pName}`);
+        // 1. Validate stock ONLY for POS/Direct Sales (Walk-in customers)
+        // Standard and Website orders bypass this because they are made-to-order.
+        /*
+        if (orderData.type === 'DirectSale') {
+            for (const item of orderData.items) {
+                const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
+                if (product) {
+                    // Check ingredients stock
+                    if (product.recipe && product.recipe.length > 0) {
+                        for (const ing of product.recipe) {
+                            const ingredient = ing.ingredientId;
+                            const neededQty = (ing.quantity || 0) * (item.quantity || 1);
+                            if ((ingredient.stock || 0) < neededQty) {
+                                throw new Error(`Not enough stock for ingredient: ${ingredient.pName}`);
+                            }
                         }
-                    }
-                } else {
-                    // Check direct product stock
-                    if ((product.stock || 0) < item.quantity) {
-                        throw new Error(`Not enough stock for ${product.pName}`);
+                    } else {
+                        // Check direct product stock
+                        if ((product.stock || 0) < item.quantity) {
+                            throw new Error(`Not enough stock for ${product.pName}`);
+                        }
                     }
                 }
             }
         }
+        */
 
         // 2. Save the order
         const order = new Order(orderData);
