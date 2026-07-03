@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import Order from '../../models/order.model.js';
+import { processStockDeduction } from './orderController.js';
 
 export const generateHash = (req, res) => {
     try {
@@ -56,10 +57,11 @@ export const payhereNotify = async (req, res) => {
             if (status_code == 2) {
                 // Payment Success - Update order
                 const order = await Order.findById(order_id);
-                if (order) {
+                if (order && order.paymentStatus !== 'Paid') {
                     order.paymentStatus = 'Paid';
                     await order.save();
-                    console.log(`Order ${order_id} marked as Paid via PayHere webhook.`);
+                    await processStockDeduction(order);
+                    console.log(`Order ${order_id} marked as Paid and stock levels updated via PayHere webhook.`);
                 }
             } else if (status_code == 0 || status_code == -1 || status_code == -2 || status_code == -3) {
                  console.log(`Payment failed or pending for order ${order_id} (Status: ${status_code})`);

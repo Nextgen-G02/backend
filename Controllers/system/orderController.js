@@ -39,7 +39,7 @@ const triggerLowStockAlert = async (productId, productName, currentStock) => {
     }
 };
 
-const processStockDeduction = async (order) => {
+export const processStockDeduction = async (order) => {
     for (const item of order.items) {
         const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
         if (product) {
@@ -189,8 +189,10 @@ export const createOrder = async (req, res) => {
             });
         }
 
-        // 4. Process items for inventory and stock reduction (for all orders)
-        await processStockDeduction(order);
+        // 4. Process items for inventory and stock reduction (ONLY if payment is complete)
+        if (order.paymentStatus === 'Paid') {
+            await processStockDeduction(order);
+        }
 
         res.status(201).json(order);
 
@@ -281,63 +283,9 @@ export const updateOrder = async (req, res) => {
             { new: true, runValidators: true }
         );
 
-        //  If order cancelled → restore stock
-        if (req.body.orderStatus === 'Cancelled' && oldOrder.orderStatus !== 'Cancelled') {
-            for (const item of order.items) {
-                const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
-
-                if (product) {
-                    if (product.recipe && product.recipe.length > 0) {
-                        // Restore ingredients
-                        for (const ing of product.recipe) {
-                            const ingredient = ing.ingredientId;
-                            const restoration = ing.quantity * item.quantity;
-                            const newStock = ingredient.stock + restoration;
-                            const newStatus = newStock === 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
-
-                            await Product.findByIdAndUpdate(ingredient._id, {
-                                $set: { stock: newStock, stockStatus: newStatus }
-                            });
-
-                            await Inventory.findOneAndUpdate(
-                                { productId: ingredient._id },
-                                { quantity: newStock, lastUpdated: Date.now() },
-                                { upsert: true }
-                            );
-
-                            await InventoryHistory.create({
-                                productId: ingredient._id,
-                                type: 'IN',
-                                quantity: restoration,
-                                reason: `Order Cancelled (#${order._id}) - Ingredient Returned`,
-                                orderId: order._id
-                            });
-                        }
-                    } else {
-                        // Restore direct product
-                        const newStock = product.stock + item.quantity;
-                        const newStatus = newStock === 0 ? "Out of Stock" : (newStock < 5 ? "Low Stock" : "In Stock");
-
-                        await Product.findByIdAndUpdate(product._id, {
-                            $set: { stock: newStock, stockStatus: newStatus }
-                        });
-
-                        await Inventory.findOneAndUpdate(
-                            { productId: product._id },
-                            { quantity: newStock, lastUpdated: Date.now() },
-                            { upsert: true }
-                        );
-
-                        await InventoryHistory.create({
-                            productId: product._id,
-                            type: 'IN',
-                            quantity: item.quantity,
-                            reason: `Order Cancelled (#${order._id}) - Product Returned`,
-                            orderId: order._id
-                        });
-                    }
-                }
-            }
+        // If order cancelled → restore stock (ONLY if payment was settled/paid)
+        if (req.body.orderStatus === 'Cancelled' && oldOrder.orderStatus !== 'Cancelled' && oldOrder.paymentStatus === 'Paid') {
+            await processStockRestoration(order, `Order Cancelled (#${order._id})`);
         }
 
 
@@ -383,12 +331,12 @@ export const updateStatus = async (req, res) => {
 
         // --- REFINED STOCK LOGIC ---
 
-        // 1. If moving TO 'Cancelled' from any active status -> Restore Stock
-        if (newStatus === 'Cancelled' && oldStatus !== 'Cancelled') {
+        // 1. If moving TO 'Cancelled' from any active status -> Restore Stock (only if paid)
+        if (newStatus === 'Cancelled' && oldStatus !== 'Cancelled' && oldOrder.paymentStatus === 'Paid') {
             await processStockRestoration(order, `Status -> Cancelled (#${order._id})`);
         } 
-        // 2. If moving FROM 'Cancelled' back to any active status -> Validate and Deduct Stock
-        else if (oldStatus === 'Cancelled' && newStatus !== 'Cancelled') {
+        // 2. If moving FROM 'Cancelled' back to any active status -> Validate and Deduct Stock (only if paid)
+        else if (oldStatus === 'Cancelled' && newStatus !== 'Cancelled' && oldOrder.paymentStatus === 'Paid') {
             // Validate stock first
             for (const item of order.items) {
                 const product = await Product.findOne({ pName: item.pName }).populate('recipe.ingredientId');
@@ -422,14 +370,20 @@ export const updateStatus = async (req, res) => {
 export const updatePaymentStatus = async (req, res) => {
     try {
         const { paymentStatus } = req.body;
+        const oldOrder = await Order.findById(req.params.id);
+        if (!oldOrder) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
         const order = await Order.findByIdAndUpdate(
             req.params.id,
             { paymentStatus },
             { new: true }
         );
 
-        if (!order) {
-            return res.status(404).json({ message: 'Order not found' });
+        // Deduct stock only when payment changes from unpaid to Paid
+        if (paymentStatus === 'Paid' && oldOrder.paymentStatus !== 'Paid') {
+            await processStockDeduction(order);
         }
 
         res.json(order);
