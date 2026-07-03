@@ -1,5 +1,5 @@
 import Purchase from "../../models/Purchase.js";
-import Supplier from "../../models/Supplier.js";
+import Supplier from "../../models/supplier.js";
 
 // @desc    Get all purchases for a specific supplier
 // @route   GET /api/purchases/supplier/:supplierId

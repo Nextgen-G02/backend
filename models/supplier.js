@@ -52,4 +52,4 @@ const supplierSchema = new mongoose.Schema({
   },
 });
 
-export default mongoose.model("Supplier", supplierSchema);
+export default mongoose.models.Supplier || mongoose.model("Supplier", supplierSchema);
