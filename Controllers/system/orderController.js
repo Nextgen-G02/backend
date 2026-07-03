@@ -205,11 +205,15 @@ export const createOrder = async (req, res) => {
 // GET ALL ORDERS
 export const getOrders = async (req, res) => {
     try {
-        const { customerName, status, date, type } = req.query;
+        const { customerName, phone, status, date, type } = req.query;
         let query = {};
 
         if (customerName) {
             query.customerName = { $regex: customerName, $options: 'i' };
+        }
+
+        if (phone) {
+            query.phone = phone;
         }
 
         if (status) {
