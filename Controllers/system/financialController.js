@@ -107,27 +107,71 @@ export const getDailyRevenue = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
         const query = { paymentStatus: 'Paid' };
+        const purchaseQuery = {};
+        const expenseQuery = {};
 
         if (startDate && endDate) {
             const start = new Date(startDate);
             const end = new Date(endDate);
             end.setHours(23, 59, 59, 999);
             query.createdAt = { $gte: start, $lte: end };
+            purchaseQuery.supplyDate = { $gte: start, $lte: end };
+            expenseQuery.date = { $gte: start, $lte: end };
         }
 
-        const dailyRevenue = await Order.aggregate([
-            { $match: query },
-            {
-                $group: {
-                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-                    revenue: { $sum: "$totalAmount" },
-                    orders: { $sum: 1 }
+        const [dailyRevenue, dailyPurchases, dailyExpenses] = await Promise.all([
+            Order.aggregate([
+                { $match: query },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                        revenue: { $sum: "$totalAmount" },
+                        orders: { $sum: 1 }
+                    }
+                },
+                { $sort: { _id: 1 } }
+            ]),
+            Purchase.aggregate([
+                { $match: purchaseQuery },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: "%Y-%m-%d", date: "$supplyDate" } },
+                        cost: { $sum: "$cost" }
+                    }
                 }
-            },
-            { $sort: { _id: 1 } }
+            ]),
+            Expense.aggregate([
+                { $match: expenseQuery },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+                        amount: { $sum: "$amount" }
+                    }
+                }
+            ])
         ]);
 
-        res.status(200).json({ success: true, data: dailyRevenue });
+        const purchaseMap = {};
+        dailyPurchases.forEach(p => {
+            purchaseMap[p._id] = p.cost;
+        });
+
+        const expenseMap = {};
+        dailyExpenses.forEach(e => {
+            expenseMap[e._id] = e.amount;
+        });
+
+        const dailyData = dailyRevenue.map(day => {
+            const dateStr = day._id;
+            const cost = purchaseMap[dateStr] || 0;
+            const expense = expenseMap[dateStr] || 0;
+            return {
+                ...day,
+                profit: day.revenue - (cost + expense)
+            };
+        });
+
+        res.status(200).json({ success: true, data: dailyData });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
