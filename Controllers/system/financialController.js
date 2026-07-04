@@ -110,15 +110,21 @@ export const getDailyRevenue = async (req, res) => {
         const purchaseQuery = {};
         const expenseQuery = {};
 
+        let start = null;
+        let end = null;
         if (startDate && endDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
+            start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            
+            end = new Date(endDate);
             end.setHours(23, 59, 59, 999);
+            
             query.createdAt = { $gte: start, $lte: end };
             purchaseQuery.supplyDate = { $gte: start, $lte: end };
             expenseQuery.date = { $gte: start, $lte: end };
         }
 
+<<<<<<< HEAD
         const [dailyRevenue, dailyPurchases, dailyExpenses] = await Promise.all([
             Order.aggregate([
                 { $match: query },
@@ -172,6 +178,90 @@ export const getDailyRevenue = async (req, res) => {
         });
 
         res.status(200).json({ success: true, data: dailyData });
+=======
+        // 1. Group daily sales revenue
+        const dailyRevenue = await Order.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+05:30" } },
+                    revenue: { $sum: "$totalAmount" },
+                    orders: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // 2. Group daily purchases cost
+        const purchaseQuery = {};
+        if (start && end) {
+            purchaseQuery.supplyDate = { $gte: start, $lte: end };
+        }
+        const dailyPurchases = await Purchase.aggregate([
+            { $match: purchaseQuery },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$supplyDate", timezone: "+05:30" } },
+                    cost: { $sum: "$cost" }
+                }
+            }
+        ]);
+
+        // 3. Group daily expenses amount
+        const expenseQuery = {};
+        if (start && end) {
+            expenseQuery.date = { $gte: start, $lte: end };
+        }
+        const dailyExpenses = await Expense.aggregate([
+            { $match: expenseQuery },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$date", timezone: "+05:30" } },
+                    amount: { $sum: "$amount" }
+                }
+            }
+        ]);
+
+        // 4. Merge datasets by date
+        const dateMap = {};
+
+        dailyRevenue.forEach(item => {
+            if (!dateMap[item._id]) {
+                dateMap[item._id] = { date: item._id, revenue: 0, orders: 0, purchases: 0, expenses: 0 };
+            }
+            dateMap[item._id].revenue = item.revenue;
+            dateMap[item._id].orders = item.orders;
+        });
+
+        dailyPurchases.forEach(item => {
+            if (!dateMap[item._id]) {
+                dateMap[item._id] = { date: item._id, revenue: 0, orders: 0, purchases: 0, expenses: 0 };
+            }
+            dateMap[item._id].purchases = item.cost;
+        });
+
+        dailyExpenses.forEach(item => {
+            if (!dateMap[item._id]) {
+                dateMap[item._id] = { date: item._id, revenue: 0, orders: 0, purchases: 0, expenses: 0 };
+            }
+            dateMap[item._id].expenses = item.amount;
+        });
+
+        // Calculate profit, filter out negative profit days, and sort by date ascending
+        const mergedData = Object.values(dateMap)
+            .map(item => {
+                const profit = item.revenue - (item.purchases + item.expenses);
+                return {
+                    _id: item.date,
+                    orders: item.orders,
+                    revenue: item.revenue,
+                    profit: profit
+                };
+            })
+            .filter(item => item.profit >= 0)
+            .sort((a, b) => a._id.localeCompare(b._id));
+
+        res.status(200).json({ success: true, data: mergedData });
+>>>>>>> 760ee9c1bc6d028bd7d91ab6763d700c744c043f
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -194,7 +284,7 @@ export const getMonthlyRevenue = async (req, res) => {
             },
             {
                 $group: {
-                    _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+                    _id: { $dateToString: { format: "%Y-%m", date: "$createdAt", timezone: "+05:30" } },
                     revenue: { $sum: "$totalAmount" },
                     orders: { $sum: 1 }
                 }
