@@ -21,6 +21,11 @@ const expenseSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
+    },
+    paymentMethod: {
+        type: String,
+        enum: ['Cash', 'Non-Cash'],
+        default: 'Cash'
     }
 }, { timestamps: true });
 

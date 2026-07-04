@@ -3,11 +3,14 @@ import Expense from '../../models/Expense.js';
 export const createExpense = async (req, res) => {
     try {
         const { category, amount, description, date } = req.body;
+        const expenseDate = date ? new Date(date) : new Date();
+        expenseDate.setHours(0, 0, 0, 0);
+
         const newExpense = new Expense({
             category,
             amount,
             description,
-            date: date || new Date(),
+            date: expenseDate,
             createdBy: req.user?._id 
         });
         await newExpense.save();
@@ -33,7 +36,7 @@ export const getExpenses = async (req, res) => {
             query.category = category;
         }
 
-        const expenses = await Expense.find(query).sort({ date: -1 });
+        const expenses = await Expense.find(query).sort({ date: -1, createdAt: -1 });
         res.status(200).json({ success: true, data: expenses });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -43,6 +46,11 @@ export const getExpenses = async (req, res) => {
 export const updateExpense = async (req, res) => {
     try {
         const { id } = req.params;
+        if (req.body.date) {
+            const expenseDate = new Date(req.body.date);
+            expenseDate.setHours(0, 0, 0, 0);
+            req.body.date = expenseDate;
+        }
         const updatedExpense = await Expense.findByIdAndUpdate(id, req.body, { new: true });
         if (!updatedExpense) {
             return res.status(404).json({ success: false, message: 'Expense not found' });
