@@ -29,7 +29,8 @@ const syncDrawerData = async (drawer) => {
     const expensesAggregate = await Expense.aggregate([
         {
             $match: {
-                date: { $gte: date, $lte: endOfDay }
+                date: { $gte: date, $lte: endOfDay },
+                paymentMethod: { $ne: 'Non-Cash' }
             }
         },
         {

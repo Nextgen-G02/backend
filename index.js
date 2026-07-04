@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 import mongoose from 'mongoose';
 import app from './app.js';
+import Expense from './models/Expense.js';
 
 
 const PORT = process.env.PORT || 5000;
@@ -28,6 +29,26 @@ const startServer = async () => {
             console.log("Dropped unique email index from suppliers");
         } catch (err) {
             // Index likely doesn't exist or already dropped
+        }
+
+        // Normalize existing expense dates to midnight for consistent sorting
+        try {
+            const expenses = await Expense.find();
+            let count = 0;
+            for (const exp of expenses) {
+                const d = new Date(exp.date);
+                if (d.getHours() !== 0 || d.getMinutes() !== 0 || d.getSeconds() !== 0 || d.getMilliseconds() !== 0) {
+                    d.setHours(0, 0, 0, 0);
+                    exp.date = d;
+                    await exp.save();
+                    count++;
+                }
+            }
+            if (count > 0) {
+                console.log(`Migration: Normalized ${count} existing expense dates to midnight.`);
+            }
+        } catch (err) {
+            console.error("Failed to run expense date normalization migration:", err);
         }
 
         app.listen(PORT, '0.0.0.0', () => {
