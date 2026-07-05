@@ -11,6 +11,7 @@ const orderSchema = new mongoose.Schema({
             quantity: { type: Number, required: true },
             unit: { type: String, default: 'pcs' },
             price: { type: Number, required: true },
+            discountPercentage: { type: Number, default: 0 },
             description: { type: String },
             customization: {
                 message: { type: String },
@@ -58,7 +59,9 @@ orderSchema.index({ orderStatus: 1 });
 
 orderSchema.pre('save', async function () {
     this.totalAmount = this.items.reduce((total, item) => {
-        return total + (item.price * item.quantity);
+        const discount = item.discountPercentage || 0;
+        const discountedPrice = item.price * (1 - discount / 100);
+        return total + (discountedPrice * item.quantity);
     }, 0);
 
     // Automation for DirectSale
