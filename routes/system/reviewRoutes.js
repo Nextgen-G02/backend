@@ -4,7 +4,8 @@ import {
     getApprovedReviews, 
     getAllReviewsAdmin, 
     updateReviewStatus, 
-    deleteReview 
+    deleteReview,
+    getProductReviews
 } from "../../Controllers/web/reviewController.js";
 import { auth } from "../../middleware/authMiddleware.js";
 import { authorizePermission } from "../../middleware/roleMiddleware.js";
@@ -13,6 +14,7 @@ const router = express.Router();
 
 // Public routes
 router.get("/", getApprovedReviews);
+router.get("/product/:productId", getProductReviews);
 
 // Customer routes
 router.post("/", auth, createReview);
