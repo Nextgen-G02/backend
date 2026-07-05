@@ -5,20 +5,22 @@ import Review from "../../models/review.js";
 // @access  Private (Customers/Users)
 export const createReview = async (req, res) => {
     try {
-        const { rating, text, location } = req.body;
+        const { productId, rating, text, location } = req.body;
         
-        if (!rating || !text) {
-            return res.status(400).json({ success: false, message: "Rating and text are required" });
+        if (!productId || !rating || !text) {
+            return res.status(400).json({ success: false, message: "Product ID, Rating, and Text are required" });
         }
 
         const review = await Review.create({
             user: req.user._id,
+            product: productId,
             rating,
             text,
-            location: location || "Sri Lanka"
+            location: location || "Sri Lanka",
+            status: 'approved'
         });
 
-        res.status(201).json({ success: true, data: review, message: "Review submitted successfully. It will appear once approved!" });
+        res.status(201).json({ success: true, data: review, message: "Review submitted successfully!" });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -39,6 +41,21 @@ export const getApprovedReviews = async (req, res) => {
     }
 };
 
+// @desc    Get all approved reviews for a specific product
+// @route   GET /api/reviews/product/:productId
+// @access  Public
+export const getProductReviews = async (req, res) => {
+    try {
+        const reviews = await Review.find({ product: req.params.productId, status: 'approved' })
+            .populate('user', 'firstName lastName')
+            .sort({ createdAt: -1 });
+            
+        res.status(200).json({ success: true, data: reviews });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // @desc    Get all reviews (for Admin panel)
 // @route   GET /api/reviews/admin
 // @access  Private (Admin/Staff with manage_marketing)
@@ -46,6 +63,7 @@ export const getAllReviewsAdmin = async (req, res) => {
     try {
         const reviews = await Review.find()
             .populate('user', 'firstName lastName email')
+            .populate('product', 'pName')
             .sort({ createdAt: -1 });
             
         res.status(200).json({ success: true, data: reviews });
