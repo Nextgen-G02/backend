@@ -19,6 +19,7 @@ import cashDrawerRoutes from "./routes/system/cashDrawerRoutes.js";
 import paymentRoutes from "./routes/system/paymentRoutes.js";
 import customCakeRoutes from "./routes/customCakeRoutes.js";
 import alertRoutes from "./routes/system/alertRoutes.js";
+import reviewRoutes from "./routes/system/reviewRoutes.js";
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -53,6 +54,7 @@ app.use("/api/cash-drawer", cashDrawerRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/custom-cakes", customCakeRoutes);
 app.use("/api/alerts", alertRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 // Deep Diagnostic Middleware
 app.use((err, req, res, next) => {
