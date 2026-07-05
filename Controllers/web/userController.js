@@ -124,7 +124,8 @@ export const loginUser = async (req, res) => {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                permissions: user.permissions || []
             }
         });
         } catch (error){
@@ -137,7 +138,7 @@ export const loginUser = async (req, res) => {
 
 export const createStaff = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, nic, address } = req.body;
+    const { firstName, lastName, email, password, nic, address, permissions } = req.body;
 
     if (!firstName || !lastName || !password || !nic || !address) {
       return res.status(400).json({
@@ -145,13 +146,13 @@ export const createStaff = async (req, res) => {
       });
     }
 
-    const finalEmail = email || `${nic}@nirosha.com`;
-
-    const existingEmail = await User.findOne({ email: finalEmail });
-    if (existingEmail) {
-      return res.status(400).json({
-        message: `User with email ${finalEmail} already exists`
-      });
+    if (email) {
+      const existingEmail = await User.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({
+          message: `User with email ${email} already exists`
+        });
+      }
     }
 
     const existingNic = await User.findOne({ nic });
@@ -163,15 +164,17 @@ export const createStaff = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const staff = await User.create({
+    const staffData = {
       firstName,
       lastName,
-      email: finalEmail,
       password: hashedPassword,
       role: "staff",
       nic,
-      address
-    });
+      address,
+      permissions: permissions || []
+    };
+    if (email) staffData.email = email;
+    const staff = await User.create(staffData);
 
     res.status(201).json({
       message: "Staff account created successfully",
@@ -180,7 +183,8 @@ export const createStaff = async (req, res) => {
         firstName: staff.firstName,
         lastName: staff.lastName,
         email: staff.email,
-        role: staff.role
+        role: staff.role,
+        permissions: staff.permissions
       }
     });
 
@@ -236,8 +240,10 @@ export const deleteUser = async (req, res) => {
 export const updateUser = async (req, res) => {
     try {
         // Extract updated fields from request body
-        const { firstName, lastName, email, role, password, nic, address } = req.body;
+        const { firstName, lastName, email, role, password, nic, address, permissions } = req.body;
         const updateData = { firstName, lastName, role, address };
+        
+        if (permissions) updateData.permissions = permissions;
         
         if (nic) updateData.nic = nic;
         
