@@ -197,3 +197,16 @@ export const withdrawFromDrawer = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+export const deleteDrawer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const drawer = await CashDrawer.findByIdAndDelete(id);
+        if (!drawer) {
+            return res.status(404).json({ success: false, message: 'Drawer record not found' });
+        }
+        res.status(200).json({ success: true, message: 'Drawer record deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
