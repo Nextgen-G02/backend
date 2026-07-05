@@ -20,8 +20,9 @@ const userSchema = new mongoose.Schema(
 
         email: {
             type: String,
-            required: true,
+            required: function() { return this.role === 'customer'; },
             unique: true,
+            sparse: true,
             trim: true,
             lowercase: true,
             match: [
@@ -41,6 +42,10 @@ const userSchema = new mongoose.Schema(
             type: String,
             enum: ['customer', 'admin', 'staff'],
             default: 'customer'
+        },
+        permissions: {
+            type: [String],
+            default: []
         },
 
         isBlocked: {
