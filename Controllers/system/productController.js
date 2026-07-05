@@ -315,11 +315,15 @@ export const updateProduct = async (req, res) => {
             if (type === 'OUT' && (reason === 'Expired' || reason === 'Damaged')) {
                 const lossAmount = Math.abs(difference) * (oldProduct.costPrice || 0);
                 if (lossAmount > 0) {
+                    const expenseDate = new Date();
+                    expenseDate.setHours(0, 0, 0, 0);
+
                     await Expense.create({
                         category: 'Other',
                         amount: lossAmount,
                         description: `Waste Loss: ${oldProduct.pName} (${Math.abs(difference)} units) - ${reason}`,
-                        date: new Date()
+                        date: expenseDate,
+                        paymentMethod: 'Non-Cash'
                     });
                 }
             }

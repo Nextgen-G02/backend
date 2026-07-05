@@ -7,12 +7,12 @@ import {
   deleteSupplier 
 } from "../../Controllers/system/supplierController.js";
 import { auth } from "../../middleware/authMiddleware.js";
-import { authorizeRoles } from "../../middleware/roleMiddleware.js";
+import { authorizeRoles, authorizePermission } from "../../middleware/roleMiddleware.js";
 
 const router = express.Router();
 
 router.use(auth);
-router.use(authorizeRoles("admin"));
+router.use(authorizePermission("manage_suppliers"));
 
 router.route("/")
   .get(getSuppliers)
